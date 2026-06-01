@@ -10,15 +10,18 @@ import { useState } from 'react'
 //     Flow: tap button → NFC Tools opens pre-filled → hold to tag → done (2 steps). Selected.
 //   Clipboard fallback: always works, user pastes into their NFC app manually.
 //
-// Payload: https://www.discogs.com/release/{id} — standard NDEF URI record.
-// When scanned, any phone opens the Discogs release page directly.
+// Payload: the production Vercel app URL with ?release={id}.
+// When scanned, the app opens and auto-loads that release for scrobbling.
+// The Vercel URL is hardcoded so tags always point to the public app,
+// regardless of where (dev, staging, etc.) the tag was written from.
+const APP_BASE = 'https://discogs-nfc.vercel.app'
 
 export default function NfcButton({ releaseId }) {
   const [copied, setCopied] = useState(false)
   const [nfcAttempted, setNfcAttempted] = useState(false)
 
-  const url = `https://www.discogs.com/release/${releaseId}`
-  const nfcToolsUrl = `nfctools://write/url?value=${encodeURIComponent(url)}`
+  const tagUrl = `${APP_BASE}?release=${releaseId}`
+  const nfcToolsUrl = `nfctools://write/url?value=${encodeURIComponent(tagUrl)}`
 
   const handleNfc = () => {
     setNfcAttempted(true)
@@ -27,7 +30,7 @@ export default function NfcButton({ releaseId }) {
     // After 600ms, if the app didn't intercept (desktop or app not installed),
     // copy to clipboard as fallback
     setTimeout(() => {
-      navigator.clipboard?.writeText(url).then(() => {
+      navigator.clipboard?.writeText(tagUrl).then(() => {
         setCopied(true)
         setTimeout(() => setCopied(false), 2500)
       })
@@ -35,7 +38,7 @@ export default function NfcButton({ releaseId }) {
   }
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(url).then(() => {
+    navigator.clipboard?.writeText(tagUrl).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     })

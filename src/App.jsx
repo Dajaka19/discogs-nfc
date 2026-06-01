@@ -7,10 +7,17 @@ import SettingsModal from './components/SettingsModal'
 
 function AppInner() {
   const { hasCredentials, selectedAlbum, settingsOpen, setSettingsOpen } = useApp()
-  const { loadCollection } = useDiscogs()
+  const { loadCollection, selectAlbum } = useDiscogs()
 
   useEffect(() => {
-    if (hasCredentials) loadCollection()
+    if (!hasCredentials) return
+    loadCollection()
+    // If the app was opened via NFC tag (?release=ID), load that release immediately
+    const releaseId = new URLSearchParams(window.location.search).get('release')
+    if (releaseId) {
+      selectAlbum({ id: releaseId })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCredentials])
 
