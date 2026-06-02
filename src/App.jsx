@@ -79,7 +79,17 @@ function AppInner() {
   }, [hasCredentials])
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden" style={{ height: '100dvh' }}>
+    <div
+      className="fixed inset-0 flex flex-col bg-background overflow-hidden"
+      style={{
+        height: '100dvh',
+        // Respect the notch / Dynamic Island / home indicator (safe areas).
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
       {/* Top bar */}
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
