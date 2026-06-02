@@ -48,6 +48,9 @@ jobs:
           mkdir -p ios/App/App/public
           cp -R dist/. ios/App/App/public/
           cp capacitor.config.json ios/App/App/capacitor.config.json
+          # config.xml is .gitignored (normally written by `cap copy`); the Xcode
+          # project bundles it, so write the minimal Capacitor stub here.
+          printf '%s\n' "<?xml version='1.0' encoding='utf-8'?>" "<widget version=\"1.0.0\" xmlns=\"http://www.w3.org/ns/widgets\" xmlns:cdv=\"http://cordova.apache.org/ns/1.0\">" "  <access origin=\"*\" />" "</widget>" > ios/App/App/config.xml
 
       - name: Resolve Swift packages
         run: |
