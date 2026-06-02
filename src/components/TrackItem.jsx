@@ -16,7 +16,7 @@ export default function TrackItem({ track, checked, indeterminate, onToggle, isS
       <RoundCheckbox checked={checked} indeterminate={indeterminate} onChange={() => onToggle(track)} />
 
       {track.position && (
-        <span className="font-mono text-xs text-accent w-8 shrink-0 leading-none">
+        <span className="font-mono text-xs text-accent shrink-0 leading-none whitespace-nowrap min-w-[3.5rem]">
           {track.position}
         </span>
       )}

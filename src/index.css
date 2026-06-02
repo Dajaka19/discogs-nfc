@@ -11,6 +11,10 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
+  /* Prevent horizontal scroll and iOS rubber-band side-pan */
+  overflow-x: hidden;
+  /* Allow vertical scroll only; blocks pinch-zoom on touch */
+  touch-action: pan-y;
 }
 
 /* Frosted glass panel */
