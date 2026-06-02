@@ -262,10 +262,10 @@ export default function AlbumDetail() {
             if (s._isSelectable === false) return // skip INTRO-style sub-tracks
             const t = cleanScrobbleTitle(s.title)
             const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
-            result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: selectedAlbum?.title })
+            result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
           })
         } else if (track._isSelectable) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: selectedAlbum?.title })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
         }
       }
     }
@@ -273,7 +273,7 @@ export default function AlbumDetail() {
   }, [discGroups, artist, selectedAlbum])
 
   const handleScrobbleAll = useCallback(() => {
-    scrobble(allTracksForScrobble, artist, selectedAlbum?.title)
+    scrobble(allTracksForScrobble, artist, cleanScrobbleTitle(selectedAlbum?.title))
   }, [scrobble, allTracksForScrobble, artist, selectedAlbum])
 
   // Collect all checked+selectable tracks for scrobbling
@@ -287,11 +287,11 @@ export default function AlbumDetail() {
               // Format: "movement title (Suite Name)" when parent is an index/heading section
               const t = cleanScrobbleTitle(s.title)
               const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
-              result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: selectedAlbum?.title })
+              result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
             }
           })
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: selectedAlbum?.title })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
         }
       }
     }
@@ -299,7 +299,7 @@ export default function AlbumDetail() {
   }, [checkedTracks, discGroups, artist, selectedAlbum])
 
   const handleScrobble = useCallback(() => {
-    scrobble(selectedTracksForScrobble, artist, selectedAlbum?.title)
+    scrobble(selectedTracksForScrobble, artist, cleanScrobbleTitle(selectedAlbum?.title))
   }, [scrobble, selectedTracksForScrobble, artist, selectedAlbum])
 
   if (!selectedAlbum) return null
