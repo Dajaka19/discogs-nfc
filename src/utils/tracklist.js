@@ -301,22 +301,48 @@ function applyBoundaryMap(tracklist, map, discs) {
 function groupByPosition(tracklist) {
   const rawDiscs = tracklist.map((t) => (t.position ? getDiscNumber(t.position) : null))
 
-  // Forward fill: inherit from the NEXT positioned track
-  let nextDisc = null
-  for (let i = rawDiscs.length - 1; i >= 0; i--) {
-    if (rawDiscs[i] !== null) nextDisc = rawDiscs[i]
-    else if (nextDisc !== null) rawDiscs[i] = nextDisc
-  }
-  // Backward fill: trailing nulls (nothing after them) default to disc 1
-  let lastDisc = 1
-  for (let i = 0; i < rawDiscs.length; i++) {
-    if (rawDiscs[i] !== null) lastDisc = rawDiscs[i]
-    else rawDiscs[i] = lastDisc
+  // Resolve blank-position entries (headings / index rows) run by run.
+  let i = 0
+  while (i < rawDiscs.length) {
+    if (rawDiscs[i] !== null) {
+      i++
+      continue
+    }
+    // [i, j) is a maximal run of null (blank-position) entries
+    let j = i
+    while (j < rawDiscs.length && rawDiscs[j] === null) j++
+    const prevDisc = i > 0 ? rawDiscs[i - 1] : null
+    const nextDisc = j < rawDiscs.length ? rawDiscs[j] : null
+
+    if (prevDisc === null) {
+      // Run at the very start → belongs to the first disc
+      for (let k = i; k < j; k++) rawDiscs[k] = nextDisc ?? 1
+    } else if (nextDisc === null) {
+      // Run at the very end → previous disc
+      for (let k = i; k < j; k++) rawDiscs[k] = prevDisc
+    } else if (nextDisc > prevDisc) {
+      // Disc boundary. The album-intro heading (first `heading`) starts the next
+      // disc; any leading `index`/orphan rows before it trail the previous disc.
+      // e.g. Dream Theater box: "Trial Of Tears" (index, disc 3) sits before
+      // "Metropolis Pt.2" (heading, disc 4) → keep it on disc 3.
+      // Default split = i → everything forward (no heading found = lead-in run).
+      // If a `heading` exists, split there: rows before it trail the prev disc.
+      let split = i
+      for (let k = i; k < j; k++) {
+        if (tracklist[k].type_ === 'heading') { split = k; break }
+      }
+      for (let k = i; k < split; k++) rawDiscs[k] = prevDisc
+      for (let k = split; k < j; k++) rawDiscs[k] = nextDisc
+    } else {
+      // Same disc (or a backward jump) → attach to the previous disc
+      for (let k = i; k < j; k++) rawDiscs[k] = prevDisc
+    }
+    i = j
   }
 
   const discs = {}
-  tracklist.forEach((track, i) => {
-    const disc = rawDiscs[i]
+  tracklist.forEach((track, idx) => {
+    const disc = rawDiscs[idx]
     if (!discs[disc]) discs[disc] = []
     const item = enrichTrack(track, disc)
     attachSubTracks(item, track, disc)

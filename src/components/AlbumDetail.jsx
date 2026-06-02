@@ -28,18 +28,19 @@ export default function AlbumDetail() {
   const discCount = Object.keys(discGroups).length
   const discLabels = useMemo(() => getDiscLabels(selectedAlbum), [selectedAlbum])
 
-  // If a disc has exactly one top-level section heading (no sub_tracks), use that
-  // heading as the disc label instead of the format name.
+  // Use the disc's FIRST top-level section heading as its label (the album-intro
+  // heading); later headings are sub-sections ("Act I/II") or trailing orphans.
+  // Falls back to the format name ("CD") when the disc has no heading.
   // E.g. "Live At La Cigale (29/4/1994)..." beats a generic "CD" label.
   const mergedDiscLabels = useMemo(() => {
     const result = {}
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
-      const sectionHeadings = tracks.filter(
+      const firstHeading = tracks.find(
         (t) => (t._isIndex || t._isHeading) && !t._hasSubTracks
       )
-      if (sectionHeadings.length === 1) {
-        result[disc] = sectionHeadings[0].title
+      if (firstHeading) {
+        result[disc] = firstHeading.title
       } else if (discLabels[disc]) {
         result[disc] = discLabels[disc]
       }
