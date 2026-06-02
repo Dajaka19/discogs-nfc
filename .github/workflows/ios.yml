@@ -31,13 +31,24 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Copy web assets + config into iOS project
-        # `copy` (not `sync`) — avoids the native SPM resolve step that needs a
-        # full Xcode context. The committed CapApp-SPM already declares plugins.
-        run: npx cap copy ios
+      - name: Stage web assets + config into iOS project
+        # Plain copy instead of `cap copy`/`cap sync`: on macOS those trigger
+        # extra native steps that fail in CI. The committed Xcode project +
+        # CapApp-SPM already declare everything; we only need the web payload
+        # and the capacitor.config.json (with server.url) inside the app.
+        run: |
+          rm -rf ios/App/App/public
+          mkdir -p ios/App/App/public
+          cp -R dist/. ios/App/App/public/
+          cp capacitor.config.json ios/App/App/capacitor.config.json
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -resolvePackageDependencies
 
       - name: Build unsigned .app
         run: |
+          set -o pipefail
           xcodebuild \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -47,7 +58,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee xcodebuild.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
 
       - name: Package unsigned IPA
         run: |
