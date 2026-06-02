@@ -49,10 +49,10 @@ A **Copy URL** button is also available if you prefer writing tags with a differ
 
 > **Note:** The Web NFC API is only supported on Android Chrome, not iOS Safari. The NFC Tools URL scheme approach works on both platforms with the free app installed.
 
-## Native iOS app (free, no Mac) — `vinyl://` scheme
+## Native iOS app (free, no Mac) — `vinylnfc://` scheme
 
 A thin native wrapper (Capacitor) lets the app register a custom URL scheme
-`vinyl://`, so an NFC tag holding `vinyl://release/<id>` can try to open the app
+`vinylnfc://`, so an NFC tag holding `vinylnfc://release/<id>` can try to open the app
 directly instead of Safari. Built for free on GitHub's macOS runners and
 sideloaded with a free Apple ID — no Mac and no paid Apple account required.
 
@@ -70,14 +70,14 @@ sideloaded with a free Apple ID — no Mac and no paid Apple account required.
 > rebuild the IPA if the native config changes.
 
 ### 3. Write a tag for the app
-Write `vinyl://release/<id>` to the tag (e.g. `vinyl://release/2966489`) with any
+Write `vinylnfc://release/<id>` to the tag (e.g. `vinylnfc://release/2966489`) with any
 NFC writer app. Tapping it will *try* to open the app at that release.
 
 ### Caveats (honest)
 - **7-day expiry:** apps signed with a free Apple ID stop working after 7 days and
   must be re-installed/re-signed (SideStore can auto-refresh on-device).
 - **NFC + custom scheme is not guaranteed:** iOS's passive background tag reader is
-  designed to open `http/https` in Safari; whether it offers to open a `vinyl://`
+  designed to open `http/https` in Safari; whether it offers to open a `vinylnfc://`
   scheme from a passive tap varies. The reliable "tag → app" path on iOS is
   Universal Links, which require a **paid** Apple Developer account. This free route
   is the closest no-cost attempt.

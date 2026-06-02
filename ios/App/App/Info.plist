@@ -54,7 +54,7 @@
 			<string>com.dajaka.vinyl</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>vinyl</string>
+				<string>vinylnfc</string>
 			</array>
 		</dict>
 	</array>

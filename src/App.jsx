@@ -7,7 +7,7 @@ import AlbumDetail from './components/AlbumDetail'
 import SettingsModal from './components/SettingsModal'
 
 // Pull a Discogs release id out of either a web URL (?release=123) or the
-// native custom scheme (vinyl://release/123 or vinyl://?release=123).
+// native custom scheme (vinylnfc://release/123 or vinylnfc://?release=123).
 function releaseIdFromUrl(url) {
   if (!url) return null
   const m = String(url).match(/release[/=](\d+)/i)
@@ -55,7 +55,7 @@ function AppInner() {
     return () => window.removeEventListener('popstate', onPop)
   }, [setSelectedAlbum])
 
-  // Native app (Capacitor): handle the vinyl:// custom scheme — both cold start
+  // Native app (Capacitor): handle the vinylnfc:// custom scheme — both cold start
   // (launched from a tag) and while running. No-op in a plain browser.
   useEffect(() => {
     if (!hasCredentials) return
