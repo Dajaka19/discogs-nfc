@@ -96,22 +96,28 @@ export default function AlbumDetail() {
   const discCount = Object.keys(discGroups).length
   const discLabels = useMemo(() => getDiscLabels(selectedAlbum), [selectedAlbum])
 
-  // Use the disc's FIRST top-level section heading as its label (the album-intro
-  // heading); later headings are sub-sections ("Act I/II") or trailing orphans.
-  // Falls back to the format name ("CD") when the disc has no heading.
-  // E.g. "Live At La Cigale (29/4/1994)..." beats a generic "CD" label.
+  // Disc label rules:
+  //  - exactly 1 section heading → that heading (e.g. "Essence", "HIStory Begins")
+  //  - several headings → the FORMAT name ("SACD", "DVD", "Blu-ray"), because the
+  //    headings are then content sections, not the disc title.
+  //  - exception: when the format is generic ("CD" / none), use the TOP heading
+  //    instead — e.g. the Dream Theater box, where each CD is a full album whose
+  //    first heading ("Metropolis Pt.2…") is the real disc title.
+  //  - no heading → the format name.
   const mergedDiscLabels = useMemo(() => {
+    const isGeneric = (f) => !f || f.toLowerCase() === 'cd'
     const result = {}
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
-      const firstHeading = tracks.find(
+      const headings = tracks.filter(
         (t) => (t._isIndex || t._isHeading) && !t._hasSubTracks
       )
-      if (firstHeading) {
-        result[disc] = firstHeading.title
-      } else if (discLabels[disc]) {
-        result[disc] = discLabels[disc]
-      }
+      const fmt = discLabels[disc]
+      let label
+      if (headings.length === 0) label = fmt
+      else if (headings.length === 1) label = headings[0].title
+      else label = isGeneric(fmt) ? headings[0].title : fmt
+      if (label) result[disc] = label
     }
     return result
   }, [discGroups, discLabels])
