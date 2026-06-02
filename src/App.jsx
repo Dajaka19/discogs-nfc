@@ -1,9 +1,18 @@
 import { useEffect, useRef } from 'react'
+import { App as CapApp } from '@capacitor/app'
 import { AppProvider, useApp } from './context/AppContext'
 import { useDiscogs } from './hooks/useDiscogs'
 import CollectionGrid from './components/CollectionGrid'
 import AlbumDetail from './components/AlbumDetail'
 import SettingsModal from './components/SettingsModal'
+
+// Pull a Discogs release id out of either a web URL (?release=123) or the
+// native custom scheme (vinyl://release/123 or vinyl://?release=123).
+function releaseIdFromUrl(url) {
+  if (!url) return null
+  const m = String(url).match(/release[/=](\d+)/i)
+  return m ? m[1] : null
+}
 
 function AppInner() {
   const { hasCredentials, collection, selectedAlbum, setSelectedAlbum, settingsOpen, setSettingsOpen } = useApp()
@@ -45,6 +54,29 @@ function AppInner() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [setSelectedAlbum])
+
+  // Native app (Capacitor): handle the vinyl:// custom scheme — both cold start
+  // (launched from a tag) and while running. No-op in a plain browser.
+  useEffect(() => {
+    if (!hasCredentials) return
+    let handle
+    CapApp.getLaunchUrl()
+      .then((res) => {
+        const id = releaseIdFromUrl(res?.url)
+        if (id) selectAlbum({ id })
+      })
+      .catch(() => {})
+    CapApp.addListener('appUrlOpen', ({ url }) => {
+      const id = releaseIdFromUrl(url)
+      if (id) selectAlbum({ id })
+    })
+      .then((h) => {
+        handle = h
+      })
+      .catch(() => {})
+    return () => handle?.remove?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCredentials])
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden" style={{ height: '100dvh' }}>

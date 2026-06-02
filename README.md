@@ -49,6 +49,39 @@ A **Copy URL** button is also available if you prefer writing tags with a differ
 
 > **Note:** The Web NFC API is only supported on Android Chrome, not iOS Safari. The NFC Tools URL scheme approach works on both platforms with the free app installed.
 
+## Native iOS app (free, no Mac) — `vinyl://` scheme
+
+A thin native wrapper (Capacitor) lets the app register a custom URL scheme
+`vinyl://`, so an NFC tag holding `vinyl://release/<id>` can try to open the app
+directly instead of Safari. Built for free on GitHub's macOS runners and
+sideloaded with a free Apple ID — no Mac and no paid Apple account required.
+
+### 1. Build the IPA (GitHub Actions, free)
+1. Push to `main` (or open the repo's **Actions** tab → **Build iOS IPA (unsigned)** → **Run workflow**).
+2. When it finishes, open the run → **Artifacts** → download **Vinyl-ipa** (`Vinyl-unsigned.ipa`).
+
+### 2. Install it (Windows, free Apple ID)
+1. Install [Sideloadly](https://sideloadly.io) on your PC.
+2. Connect the iPhone by USB, open Sideloadly, drag in `Vinyl-unsigned.ipa`.
+3. Enter your **free** Apple ID → Start. Sideloadly signs and installs it.
+4. On the iPhone: **Settings → General → VPN & Device Management** → trust your Apple ID.
+
+> The app loads the live Vercel site, so web updates appear automatically — you only
+> rebuild the IPA if the native config changes.
+
+### 3. Write a tag for the app
+Write `vinyl://release/<id>` to the tag (e.g. `vinyl://release/2966489`) with any
+NFC writer app. Tapping it will *try* to open the app at that release.
+
+### Caveats (honest)
+- **7-day expiry:** apps signed with a free Apple ID stop working after 7 days and
+  must be re-installed/re-signed (SideStore can auto-refresh on-device).
+- **NFC + custom scheme is not guaranteed:** iOS's passive background tag reader is
+  designed to open `http/https` in Safari; whether it offers to open a `vinyl://`
+  scheme from a passive tap varies. The reliable "tag → app" path on iOS is
+  Universal Links, which require a **paid** Apple Developer account. This free route
+  is the closest no-cost attempt.
+
 ## Tech Stack
 
 - React 18 + Vite 5

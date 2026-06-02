@@ -1,0 +1,62 @@
+name: Build iOS IPA (unsigned)
+
+# Builds an UNSIGNED .ipa on a free macOS runner (public repo).
+# Download it from the run's Artifacts and sign+install it with Sideloadly
+# using your free Apple ID. Trigger manually from the Actions tab, or it runs
+# on pushes that touch the native/build config.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - '.github/workflows/ios.yml'
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Build unsigned .app
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          cd build/Build/Products/Release-iphoneos
+          mkdir Payload
+          cp -R App.app Payload/
+          zip -qr Vinyl-unsigned.ipa Payload
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vinyl-ipa
+          path: build/Build/Products/Release-iphoneos/Vinyl-unsigned.ipa
+          if-no-files-found: error

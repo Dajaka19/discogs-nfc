@@ -1,0 +1,9 @@
+{
+  "appId": "com.dajaka.vinyl",
+  "appName": "Vinyl",
+  "webDir": "dist",
+  "server": {
+    "url": "https://discogs-nfc.vercel.app",
+    "cleartext": false
+  }
+}
