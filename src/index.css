@@ -8,13 +8,25 @@ body,
   background-color: #0f0f0f;
   color: white;
   font-family: 'DM Sans', system-ui, sans-serif;
-  height: 100%;
   margin: 0;
   padding: 0;
-  /* Prevent horizontal scroll and iOS rubber-band side-pan */
-  overflow-x: hidden;
-  /* Allow vertical scroll only; blocks pinch-zoom on touch */
+}
+
+/* Lock the whole viewport: kills iOS rubber-band, horizontal side-pan and
+   pinch-zoom. The App root is `fixed inset-0`, so the page itself never scrolls;
+   all vertical scrolling happens inside the inner panels (overflow-y-auto). */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
   touch-action: pan-y;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Frosted glass panel */

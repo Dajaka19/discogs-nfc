@@ -22,7 +22,7 @@ function AppInner() {
   }, [hasCredentials])
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: '100dvh' }}>
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden" style={{ height: '100dvh' }}>
       {/* Top bar */}
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
         <div className="flex items-center gap-2.5">
@@ -69,7 +69,7 @@ function AppInner() {
 
         {/* Right panel — album detail */}
         {selectedAlbum ? (
-          <div className="flex-1 overflow-y-auto relative slide-in md:animate-none">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden relative slide-in md:animate-none min-w-0">
             <AlbumDetail />
           </div>
         ) : (
