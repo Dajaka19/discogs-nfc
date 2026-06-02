@@ -7,3 +7,6 @@ dist-ssr/
 !.env.example
 .DS_Store
 Thumbs.db
+
+# local notes / credentials
+NFC-DISCOGS-lasfm-api.txt

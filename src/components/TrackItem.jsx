@@ -4,9 +4,13 @@ import RoundCheckbox from './RoundCheckbox'
 // A single track row with checkbox, position, title, duration.
 // Used for both normal tracks and sub-tracks (isSubTrack adds indent).
 export default function TrackItem({ track, checked, indeterminate, onToggle, isSubTrack }) {
+  // Show a time only when it's actually known (Discogs or a MusicBrainz lookup).
+  // Unknown duration (_durationSecs == null) → render nothing.
   const duration = track._totalDuration
     ? formatDuration(track._totalDuration)
-    : track.duration || (track._durationSecs ? formatDuration(track._durationSecs) : '')
+    : track._durationSecs
+    ? formatDuration(track._durationSecs)
+    : ''
 
   return (
     <div

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
 import { groupTracksByDisc, getDiscLabels } from '../utils/tracklist'
+import { lookupDuration } from '../utils/duration'
 import TrackList from './TrackList'
 import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
@@ -11,19 +12,86 @@ export default function AlbumDetail() {
   const { selectedAlbum, setSelectedAlbum } = useApp()
   const [checkedTracks, setCheckedTracks] = useState(new Set())
   const [selectedDisc, setSelectedDisc] = useState(0)  // 0 = All Discs
+  const [resolvedDurations, setResolvedDurations] = useState({}) // trackKey -> seconds (from MusicBrainz)
   const { scrobbleState, scrobble, reset } = useLastfm()
 
   // Reset selection when album changes
   useEffect(() => {
     setCheckedTracks(new Set())
     setSelectedDisc(0)
+    setResolvedDurations({})
     reset()
   }, [selectedAlbum?.id])
 
-  const discGroups = useMemo(
+  const baseDiscGroups = useMemo(
     () => groupTracksByDisc(selectedAlbum?.tracklist ?? [], selectedAlbum),
     [selectedAlbum]
   )
+
+  // Overlay any durations resolved from MusicBrainz onto the grouped tracks, so
+  // both the display and the scrobble payload pick them up.
+  const discGroups = useMemo(() => {
+    if (Object.keys(resolvedDurations).length === 0) return baseDiscGroups
+    const patchLeaf = (t) => {
+      if (t._durationSecs != null) return t
+      const secs = resolvedDurations[t.position || t.title]
+      return secs != null ? { ...t, _durationSecs: secs } : t
+    }
+    const out = {}
+    for (const [disc, tracks] of Object.entries(baseDiscGroups)) {
+      out[disc] = tracks.map((t) => {
+        if (t._hasSubTracks && t._subTracks) {
+          const subs = t._subTracks.map(patchLeaf)
+          const total = subs.every((s) => s._durationSecs != null)
+            ? subs.reduce((sum, s) => sum + s._durationSecs, 0)
+            : null
+          return { ...t, _subTracks: subs, _totalDuration: total }
+        }
+        return patchLeaf(t)
+      })
+    }
+    return out
+  }, [baseDiscGroups, resolvedDurations])
+
+  // Look up missing durations from MusicBrainz (conservative, rate-limited).
+  useEffect(() => {
+    if (!selectedAlbum || selectedAlbum._loading) return
+    let cancelled = false
+
+    const albumTitle = selectedAlbum.title
+    const albumArtist =
+      selectedAlbum.artists?.map((a) => a.name?.replace(/ \(\d+\)$/, '')).join(', ') || ''
+
+    // Collect unique leaf tracks (and sub-tracks) that have no known duration.
+    const missing = []
+    const seen = new Set()
+    for (const tracks of Object.values(baseDiscGroups)) {
+      for (const t of tracks) {
+        const leaves = t._hasSubTracks && t._subTracks ? t._subTracks : [t]
+        for (const leaf of leaves) {
+          if (!leaf._isSelectable || leaf._durationSecs != null) continue
+          const key = leaf.position || leaf.title
+          if (!key || seen.has(key)) continue
+          seen.add(key)
+          missing.push({ key, title: leaf.title })
+        }
+      }
+    }
+    if (missing.length === 0) return
+
+    ;(async () => {
+      for (const { key, title } of missing) {
+        if (cancelled) return
+        const secs = await lookupDuration({ artist: albumArtist, title, album: albumTitle })
+        if (cancelled) return
+        if (secs != null) setResolvedDurations((prev) => ({ ...prev, [key]: secs }))
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [baseDiscGroups, selectedAlbum])
   // Derive disc count from actual grouped data — avoids phantom discs from format metadata
   const discCount = Object.keys(discGroups).length
   const discLabels = useMemo(() => getDiscLabels(selectedAlbum), [selectedAlbum])

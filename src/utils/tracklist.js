@@ -1,10 +1,12 @@
+// Returns seconds, or null when the duration is missing/invalid.
+// null = "unknown" → the UI shows no time and scrobbling omits the duration field.
 export function parseDuration(str) {
-  if (!str || typeof str !== 'string') return 210
+  if (!str || typeof str !== 'string') return null
   const parts = str.split(':').map(Number)
-  if (parts.some(isNaN)) return 210
+  if (parts.some(isNaN)) return null
   if (parts.length === 2) return parts[0] * 60 + parts[1]
   if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  return 210
+  return null
 }
 
 export function formatDuration(seconds) {
@@ -117,7 +119,11 @@ function attachSubTracks(item, track, disc) {
     _parentPosition: track.position,
     _indexTitle: indexTitle,
   }))
-  item._totalDuration = item._subTracks.reduce((sum, s) => sum + s._durationSecs, 0)
+  // Only compute a total when EVERY sub-track has a known duration, otherwise
+  // the sum would be misleading. Unknown → null (no time shown for the parent).
+  item._totalDuration = item._subTracks.every((s) => s._durationSecs != null)
+    ? item._subTracks.reduce((sum, s) => sum + s._durationSecs, 0)
+    : null
   item._isSelectable = false
   item._hasSubTracks = true
 }
@@ -411,14 +417,16 @@ export function buildScrobblePayload(selectedTracks, endTimeUnix) {
   const payload = []
 
   for (const track of reversed) {
-    const duration = track._durationSecs || 210
-    cursor -= duration
+    // 210s is used ONLY to space the timestamps when the real length is unknown.
+    const spacing = track._durationSecs ?? 210
+    cursor -= spacing
     payload.unshift({
       artist: track._artist || '',
       track: track.title || '',
       album: track._album || '',
       timestamp: cursor,
-      duration,
+      // null when unknown → lastfm.js omits the duration field for this track
+      duration: track._durationSecs ?? null,
       trackNumber: track.position || '',
     })
   }
