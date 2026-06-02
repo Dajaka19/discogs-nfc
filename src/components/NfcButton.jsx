@@ -11,6 +11,7 @@ const SCHEME_BASE = 'vinylnfc://release'
 
 export default function NfcButton({ releaseId }) {
   const [status, setStatus] = useState('idle') // idle | writing | done | error | copied
+  const [showHelp, setShowHelp] = useState(false)
 
   const tagUrl = `${SCHEME_BASE}/${releaseId}`
   const supportsWebNfc = typeof window !== 'undefined' && 'NDEFReader' in window
@@ -51,6 +52,7 @@ export default function NfcButton({ releaseId }) {
   }[status]
 
   return (
+    <div className="space-y-2">
     <div className="flex items-center gap-2">
       {/* Direct write only where the browser can do it (Android Web NFC) */}
       {supportsWebNfc && (
@@ -102,6 +104,32 @@ export default function NfcButton({ releaseId }) {
           </>
         )}
       </button>
+
+      {/* How-to toggle */}
+      <button
+        onClick={() => setShowHelp((s) => !s)}
+        title="Cómo grabar el tag"
+        className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-text-secondary hover:text-white hover:border-accent/40 transition-all text-xs font-mono"
+      >
+        ?
+      </button>
+    </div>
+
+      {showHelp && (
+        <div className="bg-card/80 border border-border rounded-xl p-3 text-xs font-sans text-text-secondary space-y-1.5 fade-in max-w-sm">
+          <p className="text-white font-medium">Grabar el tag (gratis, con NFC Tools):</p>
+          <ol className="space-y-1 list-decimal list-inside">
+            <li>Toca <span className="text-white">Copiar enlace</span></li>
+            <li>Abre <span className="text-white">NFC Tools</span> → pestaña <span className="text-white">Escribir</span></li>
+            <li><span className="text-white">Añadir un registro</span> → <span className="text-white">URL/URI</span> → pega → OK</li>
+            <li><span className="text-white">Escribir</span> → acerca el iPhone al tag</li>
+          </ol>
+          <p className="opacity-60 pt-0.5">
+            Al escanearlo abrirá esta app en el disco. (Para escribir muchos a la vez, lo más rápido es un
+            lector USB NFC en el PC con NFC Tools.)
+          </p>
+        </div>
+      )}
     </div>
   )
 }

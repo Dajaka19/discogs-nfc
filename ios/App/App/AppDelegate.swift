@@ -11,7 +11,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         if let url = launchOptions?[.url] as? URL {
             handleDeepLink(url)
         }
+        // Enable the iOS edge-swipe "back" gesture in the web view (off by default
+        // in WKWebView). Combined with the app's history handling, swiping right
+        // from a release returns to the collection.
+        enableSwipeBack(attempt: 0)
         return true
+    }
+
+    private func enableSwipeBack(attempt: Int) {
+        if let vc = window?.rootViewController as? CAPBridgeViewController, let webView = vc.bridge?.webView {
+            webView.allowsBackForwardNavigationGestures = true
+        } else if attempt < 40 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.enableSwipeBack(attempt: attempt + 1)
+            }
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {}
