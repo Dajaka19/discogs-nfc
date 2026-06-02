@@ -17,9 +17,14 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app; xcodebuild -version
 
       - uses: actions/setup-node@v4
         with:
@@ -67,6 +72,19 @@ jobs:
           name: xcodebuild-log
           path: xcodebuild.log
           if-no-files-found: ignore
+
+      - name: Publish build log to ci-log branch on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/lp && cp xcodebuild.log /tmp/lp/ 2>/dev/null || echo "no log" > /tmp/lp/xcodebuild.log
+          cd /tmp/lp
+          git init -q
+          git checkout -q -b ci-log
+          git add xcodebuild.log
+          git -c user.email=ci@ci -c user.name=ci commit -qm "build log ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-log
 
       - name: Package unsigned IPA
         run: |
