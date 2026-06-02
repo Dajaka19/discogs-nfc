@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useCallback } from 'react'
 const STORAGE_KEYS = {
   credentials: 'vinyl_credentials',
   releaseCache: 'vinyl_release_cache',
+  collection: 'vinyl_collection',
 }
 
 const MAX_CACHE_ENTRIES = 200
@@ -41,7 +42,19 @@ export function AppProvider({ children }) {
     })
   )
 
-  const [collection, setCollection] = useState([])
+  // Collection list is persisted so it shows instantly on reload instead of
+  // re-downloading every record from Discogs each time.
+  const [collection, setCollectionState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.collection, [])
+  )
+  const setCollection = useCallback((releases) => {
+    setCollectionState(releases)
+    try {
+      localStorage.setItem(STORAGE_KEYS.collection, JSON.stringify(releases))
+    } catch {
+      // quota exceeded (very large collection) — skip persisting, will refetch
+    }
+  }, [])
   const [collectionLoading, setCollectionLoading] = useState(false)
   const [collectionProgress, setCollectionProgress] = useState({ loaded: 0, total: 0 })
   const [collectionError, setCollectionError] = useState(null)

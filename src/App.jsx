@@ -6,12 +6,14 @@ import AlbumDetail from './components/AlbumDetail'
 import SettingsModal from './components/SettingsModal'
 
 function AppInner() {
-  const { hasCredentials, selectedAlbum, settingsOpen, setSettingsOpen } = useApp()
+  const { hasCredentials, collection, selectedAlbum, settingsOpen, setSettingsOpen } = useApp()
   const { loadCollection, selectAlbum } = useDiscogs()
 
   useEffect(() => {
     if (!hasCredentials) return
-    loadCollection()
+    // Only fetch from Discogs when there's no cached collection yet. Otherwise
+    // the persisted list shows instantly; use the refresh button to re-sync.
+    if (collection.length === 0) loadCollection()
     // If the app was opened via NFC tag (?release=ID), load that release immediately
     const releaseId = new URLSearchParams(window.location.search).get('release')
     if (releaseId) {
