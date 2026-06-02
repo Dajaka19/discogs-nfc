@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
 import { groupTracksByDisc, getDiscLabels } from '../utils/tracklist'
-import { lookupDuration } from '../utils/duration'
+import { lookupDuration, getCachedDuration } from '../utils/duration'
 import TrackList from './TrackList'
 import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
@@ -79,8 +79,23 @@ export default function AlbumDetail() {
     }
     if (missing.length === 0) return
 
+    // Seed from the persisted cache synchronously → already-found times show
+    // instantly on reload (no flicker, no re-fetch). Only query the network for
+    // tracks not cached yet (undefined); known misses (null) are skipped.
+    const seed = {}
+    const toFetch = []
+    for (const { key, title } of missing) {
+      const cached = getCachedDuration({ artist: albumArtist, title, album: albumTitle })
+      if (cached === undefined) toFetch.push({ key, title })
+      else if (cached != null) seed[key] = cached
+    }
+    if (Object.keys(seed).length > 0) {
+      setResolvedDurations((prev) => ({ ...prev, ...seed }))
+    }
+    if (toFetch.length === 0) return
+
     ;(async () => {
-      for (const { key, title } of missing) {
+      for (const { key, title } of toFetch) {
         if (cancelled) return
         const secs = await lookupDuration({ artist: albumArtist, title, album: albumTitle })
         if (cancelled) return

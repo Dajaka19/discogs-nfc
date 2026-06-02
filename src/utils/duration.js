@@ -50,6 +50,18 @@ function cacheKey(artist, title, album) {
   return `${norm(artist)}|${norm(title)}|${norm(album)}`
 }
 
+// Synchronous cache read (no network), so already-resolved durations show
+// instantly on reload instead of being re-fetched.
+// Returns: number (seconds) | null (known miss) | undefined (not cached yet).
+export function getCachedDuration({ artist, title, album }) {
+  if (!artist || !title) return undefined
+  const cache = loadCache()
+  const key = cacheKey(artist, title, album)
+  if (!(key in cache)) return undefined
+  const v = cache[key].s
+  return v === NOT_FOUND ? null : v
+}
+
 // Returns seconds (number) or null.
 export async function lookupDuration({ artist, title, album }) {
   if (!artist || !title) return null
