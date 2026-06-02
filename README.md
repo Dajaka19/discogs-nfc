@@ -73,24 +73,6 @@ sideloaded with a free Apple ID — no Mac and no paid Apple account required.
 Write `vinylnfc://release/<id>` to the tag (e.g. `vinylnfc://release/2966489`) with any
 NFC writer app. Tapping it will *try* to open the app at that release.
 
-### Native NFC writing (ready, needs a paid Apple account to enable)
-The app includes Core NFC writing code (`AppDelegate.swift` → `NFCWriter`). The
-"Grabar tag" button navigates to `vinylnfc://write/<id>`, which the app intercepts
-to write `vinylnfc://release/<id>` to a tag. **It is not active on a free Apple ID**
-because Core NFC needs the `com.apple.developer.nfc.readersession.formats`
-entitlement, which requires a paid Apple Developer account (a free-signed session
-fails with a sandbox restriction).
-
-To enable it (paid account):
-1. Add an `App.entitlements` file with the key
-   `com.apple.developer.nfc.readersession.formats` → array `["NDEF"]`, and reference
-   it in the target's `CODE_SIGN_ENTITLEMENTS` build setting.
-2. Enable the **Near Field Communication Tag Reading** capability on the App ID in
-   the Apple Developer portal.
-3. Build/sign with the paid team. The "Grabar tag" button then writes tags natively.
-
-(`NFCReaderUsageDescription` is already in `Info.plist`.)
-
 ### Caveats (honest)
 - **7-day expiry:** apps signed with a free Apple ID stop working after 7 days and
   must be re-installed/re-signed (SideStore can auto-refresh on-device).

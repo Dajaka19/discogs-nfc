@@ -1,17 +1,15 @@
 import UIKit
 import Capacitor
 import WebKit
-import CoreNFC
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private var nfcWriter: NFCWriter?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         if let url = launchOptions?[.url] as? URL {
-            handleURL(url)
+            handleDeepLink(url)
         }
         return true
     }
@@ -23,7 +21,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillTerminate(_ application: UIApplication) {}
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        handleURL(url)
+        // vinylnfc://release/<id> → navigate the web view to the ?release= URL,
+        // which the web app already knows how to load. Bridge-independent.
+        handleDeepLink(url)
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
@@ -31,23 +31,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
-    // MARK: - URL routing
-    //   vinylnfc://release/<id> → open that release (navigate the web view)
-    //   vinylnfc://write/<id>   → write a tag holding vinylnfc://release/<id> (Core NFC)
+    // MARK: - Deep link handling
 
-    private func handleURL(_ url: URL) {
-        guard let id = AppDelegate.idFromURL(url) else { return }
-        if url.host == "write" {
-            startNFCWrite(releaseId: id)
-        } else {
-            let target = "https://discogs-nfc.vercel.app/?release=\(id)"
-            loadInWebView(target, attempt: 0)
-        }
+    private func handleDeepLink(_ url: URL) {
+        guard let id = AppDelegate.releaseId(from: url) else { return }
+        let target = "https://discogs-nfc.vercel.app/?release=\(id)"
+        loadInWebView(target, attempt: 0)
     }
 
-    private static func idFromURL(_ url: URL) -> String? {
+    private static func releaseId(from url: URL) -> String? {
         let s = url.absoluteString
-        guard let range = s.range(of: "(release|write)[/=][0-9]+", options: .regularExpression) else { return nil }
+        guard let range = s.range(of: "release[/=][0-9]+", options: .regularExpression) else { return nil }
         let digits = String(s[range]).drop(while: { !$0.isNumber })
         return digits.isEmpty ? nil : String(digits)
     }
@@ -61,71 +55,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 self?.loadInWebView(urlString, attempt: attempt + 1)
             }
         }
-    }
-
-    // MARK: - Native NFC writing (requires the NFC entitlement → paid Apple account).
-    //   Without the entitlement, the session ends with a sandbox restriction error.
-    //   The code is ready; to enable, add `com.apple.developer.nfc.readersession.formats`
-    //   to an .entitlements file and sign with a paid team.
-
-    private func startNFCWrite(releaseId: String) {
-        let payload = "vinylnfc://release/\(releaseId)"
-        nfcWriter = NFCWriter()
-        nfcWriter?.write(payload)
-    }
-}
-
-// MARK: - NFCWriter
-
-final class NFCWriter: NSObject, NFCNDEFReaderSessionDelegate {
-    private var session: NFCNDEFReaderSession?
-    private var payload: String = ""
-
-    func write(_ urlString: String) {
-        guard NFCNDEFReaderSession.readingAvailable else { return }
-        payload = urlString
-        session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
-        session?.alertMessage = "Acerca el iPhone al tag para grabar"
-        session?.begin()
-    }
-
-    func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
-        // Not used for writing.
-    }
-
-    func readerSession(_ session: NFCNDEFReaderSession, didDetect tags: [NFCNDEFTag]) {
-        guard let tag = tags.first else { return }
-        session.connect(to: tag) { [payload] error in
-            if error != nil {
-                session.invalidate(errorMessage: "Error de conexión")
-                return
-            }
-            guard let record = NFCNDEFPayload.wellKnownTypeURIPayload(string: payload) else {
-                session.invalidate(errorMessage: "URL inválida")
-                return
-            }
-            let message = NFCNDEFMessage(records: [record])
-            tag.queryNDEFStatus { status, _, _ in
-                switch status {
-                case .readWrite:
-                    tag.writeNDEF(message) { writeError in
-                        if writeError != nil {
-                            session.invalidate(errorMessage: "No se pudo grabar")
-                        } else {
-                            session.alertMessage = "¡Tag grabado!"
-                            session.invalidate()
-                        }
-                    }
-                case .readOnly:
-                    session.invalidate(errorMessage: "El tag es de solo lectura")
-                default:
-                    session.invalidate(errorMessage: "Tag no compatible")
-                }
-            }
-        }
-    }
-
-    func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
-        self.session = nil
     }
 }

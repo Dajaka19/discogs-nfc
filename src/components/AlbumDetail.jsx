@@ -319,10 +319,13 @@ export default function AlbumDetail() {
         {/* Mobile back button */}
         <button
           onClick={() => {
-            // If we pushed a history entry when opening (mobile), pop it so the
-            // back stack stays in sync; otherwise just close directly.
-            if (window.history.state?.vinylAlbum) window.history.back()
-            else setSelectedAlbum(null)
+            // Close directly (reliable in the native WKWebView, where history.back()
+            // can reload the page instead of firing popstate). Also unwind the
+            // history entry we pushed, without navigating, to keep the stack clean.
+            setSelectedAlbum(null)
+            if (window.history.state?.vinylAlbum) {
+              window.history.replaceState({}, '', window.location.pathname)
+            }
           }}
           className="md:hidden flex items-center gap-1.5 text-sm text-text-secondary hover:text-white transition-colors font-sans"
         >
