@@ -31,8 +31,10 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Sync Capacitor iOS
-        run: npx cap sync ios
+      - name: Copy web assets + config into iOS project
+        # `copy` (not `sync`) — avoids the native SPM resolve step that needs a
+        # full Xcode context. The committed CapApp-SPM already declares plugins.
+        run: npx cap copy ios
 
       - name: Build unsigned .app
         run: |
