@@ -293,20 +293,60 @@ function applyBoundaryMap(tracklist, map, discs) {
   })
 }
 
+// Position-based grouping: side-letter (A/B→1, C/D→2) and N-M ("1-01", "2-3").
+// Tracks without a position (headings, index rows) are forward-filled from the
+// NEXT positioned track so they land on the correct disc — and crucially they
+// are KEPT, so a disc-name heading ("El Mar No Cesa") stays as both a section
+// divider and the source of the disc label.
+function groupByPosition(tracklist) {
+  const rawDiscs = tracklist.map((t) => (t.position ? getDiscNumber(t.position) : null))
+
+  // Forward fill: inherit from the NEXT positioned track
+  let nextDisc = null
+  for (let i = rawDiscs.length - 1; i >= 0; i--) {
+    if (rawDiscs[i] !== null) nextDisc = rawDiscs[i]
+    else if (nextDisc !== null) rawDiscs[i] = nextDisc
+  }
+  // Backward fill: trailing nulls (nothing after them) default to disc 1
+  let lastDisc = 1
+  for (let i = 0; i < rawDiscs.length; i++) {
+    if (rawDiscs[i] !== null) lastDisc = rawDiscs[i]
+    else rawDiscs[i] = lastDisc
+  }
+
+  const discs = {}
+  tracklist.forEach((track, i) => {
+    const disc = rawDiscs[i]
+    if (!discs[disc]) discs[disc] = []
+    const item = enrichTrack(track, disc)
+    attachSubTracks(item, track, disc)
+    discs[disc].push(item)
+  })
+  return discs
+}
+
 // Group tracklist into discs. Accepts the full release object so it can
 // detect multi-format releases and apply the right disc-separation strategy.
 export function groupTracksByDisc(tracklist, release) {
   const formats = release?.formats ?? []
   const physicalFormats = formats.filter(isPhysicalFormat)
 
-  // D: multi-letter position prefixes (BRD1, CD1, DVD1, SACD1…)
-  // Runs first for all releases — purely data-driven, unambiguous when present.
+  // D: multi-letter position prefixes (BRD1, CD1-1, SACD-1, DVD-3…).
+  // Runs first — purely data-driven, unambiguous when present.
   const prefixMap = tryPrefixBasedGrouping(tracklist)
   if (prefixMap) {
     const discs = {}
     applyFlatMap(tracklist, prefixMap, discs)
     if (Object.keys(discs).length > 1) return discs
   }
+
+  // Position-based grouping (N-M, side letters). Preferred whenever the
+  // positions already encode >1 disc — it keeps the disc-name headings, so they
+  // become both section dividers and disc labels. Must run BEFORE the
+  // heading-boundary strategies (A/C), which would otherwise CONSUME those
+  // headings and leave generic "CD" labels (the bug on HIStory / Héroes box).
+  const posDiscs = groupByPosition(tracklist)
+  if (Object.keys(posDiscs).length > 1) return posDiscs
 
   if (physicalFormats.length > 1) {
     // A: heading/index tracks whose titles contain a physical format name
@@ -334,34 +374,8 @@ export function groupTracksByDisc(tracklist, release) {
     }
   }
 
-  // Default: side-letter (A/B→1, C/D→2) and N-M position grouping.
-  // Tracks without a position (headings, index rows) are forward-filled from
-  // the next positioned track so they land on the correct disc — e.g. the
-  // "Live At The Pasadena Rose Bowl" heading before 2-1 goes to disc 2, not 1.
-  const rawDiscs = tracklist.map(t => t.position ? getDiscNumber(t.position) : null)
-
-  // Forward fill: inherit from the NEXT positioned track
-  let nextDisc = null
-  for (let i = rawDiscs.length - 1; i >= 0; i--) {
-    if (rawDiscs[i] !== null) nextDisc = rawDiscs[i]
-    else if (nextDisc !== null) rawDiscs[i] = nextDisc
-  }
-  // Backward fill: trailing nulls (nothing after them) default to disc 1
-  let lastDisc = 1
-  for (let i = 0; i < rawDiscs.length; i++) {
-    if (rawDiscs[i] !== null) lastDisc = rawDiscs[i]
-    else rawDiscs[i] = lastDisc
-  }
-
-  const discs = {}
-  tracklist.forEach((track, i) => {
-    const disc = rawDiscs[i]
-    if (!discs[disc]) discs[disc] = []
-    const item = enrichTrack(track, disc)
-    attachSubTracks(item, track, disc)
-    discs[disc].push(item)
-  })
-  return discs
+  // Single disc (or positions/headings gave no multi-disc signal)
+  return posDiscs
 }
 
 // Build scrobble payload with timestamps calculated backwards from endTimeUnix.
