@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext'
 
-export default function ScrobbleButton({ checkedCount, scrobbleState, onScrobble, onReset }) {
+export default function ScrobbleButton({ checkedCount, fallbackCount = 0, fallbackLabel = 'disco', scrobbleState, onScrobble, onReset }) {
   const { credentials } = useApp()
   const { status, progress, total, results, error } = scrobbleState
 
@@ -98,13 +98,18 @@ export default function ScrobbleButton({ checkedCount, scrobbleState, onScrobble
     )
   }
 
-  // Idle state
+  // Idle state — scrobble the selection if any, otherwise the current disc/album.
+  const hasSelection = checkedCount > 0
+  const enabled = hasSelection || fallbackCount > 0
+  const label = hasSelection
+    ? `Scrobble ${checkedCount} pista${checkedCount !== 1 ? 's' : ''}`
+    : `Scrobble ${fallbackLabel}`
   return (
     <button
       onClick={onScrobble}
-      disabled={checkedCount === 0}
+      disabled={!enabled}
       className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-sans font-medium text-sm transition-all ${
-        checkedCount > 0
+        enabled
           ? 'bg-accent text-black hover:brightness-110 active:scale-95'
           : 'bg-card text-text-secondary cursor-not-allowed border border-border'
       }`}
@@ -114,7 +119,7 @@ export default function ScrobbleButton({ checkedCount, scrobbleState, onScrobble
         <circle cx="6" cy="18" r="3" />
         <circle cx="18" cy="16" r="3" />
       </svg>
-      {checkedCount > 0 ? `Scrobble ${checkedCount} track${checkedCount !== 1 ? 's' : ''}` : 'Select tracks to scrobble'}
+      {label}
     </button>
   )
 }

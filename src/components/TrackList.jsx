@@ -14,6 +14,18 @@ function collectSelectables(sectionTracks) {
 }
 
 export default function TrackList({ tracks, checkedTracks, onToggle, onGroupToggle, onSelectAll, onDeselectAll }) {
+  // Selectable leaf keys across this disc — for the compact "select all" toggle.
+  const selectableKeys = useMemo(() => {
+    const keys = []
+    for (const t of tracks) {
+      if (t._hasSubTracks && t._subTracks) t._subTracks.forEach((s) => keys.push(s.position || s.title))
+      else if (t._isSelectable) keys.push(t.position || t.title)
+    }
+    return keys
+  }, [tracks])
+  const allChecked = selectableKeys.length > 0 && selectableKeys.every((k) => checkedTracks.has(k))
+  const someChecked = selectableKeys.some((k) => checkedTracks.has(k))
+
   const selectedDuration = useMemo(() => {
     let secs = 0
     for (const track of tracks) {
@@ -50,19 +62,18 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
 
   return (
     <div className="space-y-1">
-      {/* Header row */}
+      {/* Header row — compact "select all" toggle + selected duration */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <button onClick={onSelectAll} className="text-xs text-accent hover:brightness-110 font-sans transition-colors">
-            Select all
-          </button>
-          <span className="text-text-secondary text-xs">·</span>
-          <button onClick={onDeselectAll} className="text-xs text-text-secondary hover:text-white font-sans transition-colors">
-            Deselect all
-          </button>
-        </div>
+        <button
+          onClick={() => (allChecked ? onDeselectAll() : onSelectAll())}
+          className="flex items-center gap-2 group"
+          title={allChecked ? 'Deseleccionar todo' : 'Seleccionar todo'}
+        >
+          <RoundCheckbox checked={allChecked} indeterminate={someChecked && !allChecked} onChange={() => (allChecked ? onDeselectAll() : onSelectAll())} />
+          <span className="text-xs font-sans text-text-secondary group-hover:text-white transition-colors">Todas</span>
+        </button>
         {selectedDuration > 0 && (
-          <span className="font-mono text-xs text-text-secondary">{formatDuration(selectedDuration)} selected</span>
+          <span className="font-mono text-xs text-text-secondary">{formatDuration(selectedDuration)}</span>
         )}
       </div>
 

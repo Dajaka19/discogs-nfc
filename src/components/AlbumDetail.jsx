@@ -13,6 +13,24 @@ function cleanScrobbleTitle(title) {
   const i = title.search(/\s+=\s+/)
   return (i >= 0 ? title.slice(0, i) : title).trim()
 }
+
+// Build a Last.fm scrobble payload from a flat track array (handles sub-tracks,
+// skips non-scrobblable rows, cleans titles, prefixes movement index names).
+function buildScrobbleList(tracks, artist, album) {
+  const out = []
+  for (const track of tracks) {
+    if (track._hasSubTracks && track._subTracks) {
+      for (const s of track._subTracks) {
+        if (s._isSelectable === false) continue
+        const t = cleanScrobbleTitle(s.title)
+        out.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: artist, _album: album })
+      }
+    } else if (track._isSelectable) {
+      out.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: album })
+    }
+  }
+  return out
+}
 import TrackList from './TrackList'
 import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
@@ -252,55 +270,39 @@ export default function AlbumDetail() {
     [discGroups]
   )
 
-  // All selectable tracks from every disc — for the one-tap "scrobble album" button
-  const allTracksForScrobble = useMemo(() => {
-    const result = []
-    for (const disc of Object.values(discGroups)) {
-      for (const track of disc) {
-        if (track._hasSubTracks && track._subTracks) {
-          track._subTracks.forEach((s) => {
-            if (s._isSelectable === false) return // skip INTRO-style sub-tracks
-            const t = cleanScrobbleTitle(s.title)
-            const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
-            result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
-          })
-        } else if (track._isSelectable) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
-        }
-      }
-    }
-    return result
-  }, [discGroups, artist, selectedAlbum])
+  const albumTitleClean = cleanScrobbleTitle(selectedAlbum?.title)
 
-  const handleScrobbleAll = useCallback(() => {
-    scrobble(allTracksForScrobble, artist, cleanScrobbleTitle(selectedAlbum?.title))
-  }, [scrobble, allTracksForScrobble, artist, selectedAlbum])
+  // Tracks of the current view (a disc tab, or all discs) — the default scrobble.
+  const currentDiscForScrobble = useMemo(
+    () => buildScrobbleList(currentDisc, artist, albumTitleClean),
+    [currentDisc, artist, albumTitleClean]
+  )
 
-  // Collect all checked+selectable tracks for scrobbling
+  // Checked tracks across all discs — the scrobble when something is selected.
   const selectedTracksForScrobble = useMemo(() => {
     const result = []
     for (const disc of Object.values(discGroups)) {
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
           track._subTracks.forEach((s) => {
-            if (checkedTracks.has(trackKey(s))) {
-              // Format: "movement title (Suite Name)" when parent is an index/heading section
+            if (s._isSelectable !== false && checkedTracks.has(trackKey(s))) {
               const t = cleanScrobbleTitle(s.title)
-              const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
-              result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
+              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: artist, _album: albumTitleClean })
             }
           })
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: cleanScrobbleTitle(selectedAlbum?.title) })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: albumTitleClean })
         }
       }
     }
     return result
-  }, [checkedTracks, discGroups, artist, selectedAlbum])
+  }, [checkedTracks, discGroups, artist, albumTitleClean])
 
+  // Scrobble the selection if any track is checked, otherwise the current view.
   const handleScrobble = useCallback(() => {
-    scrobble(selectedTracksForScrobble, artist, cleanScrobbleTitle(selectedAlbum?.title))
-  }, [scrobble, selectedTracksForScrobble, artist, selectedAlbum])
+    const tracks = checkedTracks.size > 0 ? selectedTracksForScrobble : currentDiscForScrobble
+    scrobble(tracks, artist, albumTitleClean)
+  }, [checkedTracks, selectedTracksForScrobble, currentDiscForScrobble, scrobble, artist, albumTitleClean])
 
   if (!selectedAlbum) return null
 
@@ -363,26 +365,6 @@ export default function AlbumDetail() {
               <p className="font-mono text-xs text-text-secondary mt-1 opacity-70">{formatName}</p>
             )}
           </div>
-
-          {/* One-tap scrobble entire album — top-right of header */}
-          {!selectedAlbum._loading && allTracksForScrobble.length > 0 && (
-            <button
-              onClick={handleScrobbleAll}
-              disabled={scrobbleState.status === 'loading'}
-              title={`Scrobble all ${allTracksForScrobble.length} tracks`}
-              className="shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all group"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                className="text-text-secondary group-hover:text-accent transition-colors">
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
-              <span className="text-xs font-sans text-text-secondary group-hover:text-accent transition-colors leading-none">
-                Scrobble<br />album
-              </span>
-            </button>
-          )}
         </div>
 
         {/* Genres + styles */}
@@ -439,15 +421,38 @@ export default function AlbumDetail() {
 
         {/* Action bar */}
         {!selectedAlbum._loading && (
-          <div className="flex flex-wrap items-start gap-3 pt-1 pb-6">
+          <div className="flex flex-wrap items-start gap-3 pt-1">
             <ScrobbleButton
               checkedCount={checkedTracks.size}
+              fallbackCount={currentDiscForScrobble.length}
+              fallbackLabel={selectedDisc === 0 ? 'álbum' : 'disco'}
               scrobbleState={scrobbleState}
               onScrobble={handleScrobble}
               onReset={reset}
             />
             {selectedAlbum.id && <NfcButton releaseId={selectedAlbum.id} />}
           </div>
+        )}
+
+        {/* View on Discogs */}
+        {!selectedAlbum._loading && selectedAlbum.id && (
+          <a
+            href={`https://www.discogs.com/release/${selectedAlbum.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between gap-3 px-4 py-3 mb-6 rounded-xl border border-border bg-card/60 hover:bg-card hover:border-accent/40 transition-all group"
+          >
+            <span className="flex items-center gap-2 text-sm font-sans text-text-secondary group-hover:text-white transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="2.5" />
+              </svg>
+              Ver en Discogs
+            </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary group-hover:text-accent transition-colors">
+              <path d="M7 17L17 7M17 7H9M17 7v8" />
+            </svg>
+          </a>
         )}
       </div>
     </div>
