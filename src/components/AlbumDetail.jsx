@@ -318,7 +318,12 @@ export default function AlbumDetail() {
       <div className="relative z-10 p-5 space-y-5 fade-in">
         {/* Mobile back button */}
         <button
-          onClick={() => setSelectedAlbum(null)}
+          onClick={() => {
+            // If we pushed a history entry when opening (mobile), pop it so the
+            // back stack stays in sync; otherwise just close directly.
+            if (window.history.state?.vinylAlbum) window.history.back()
+            else setSelectedAlbum(null)
+          }}
           className="md:hidden flex items-center gap-1.5 text-sm text-text-secondary hover:text-white transition-colors font-sans"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import { useDiscogs } from './hooks/useDiscogs'
 import CollectionGrid from './components/CollectionGrid'
@@ -6,7 +6,7 @@ import AlbumDetail from './components/AlbumDetail'
 import SettingsModal from './components/SettingsModal'
 
 function AppInner() {
-  const { hasCredentials, collection, selectedAlbum, settingsOpen, setSettingsOpen } = useApp()
+  const { hasCredentials, collection, selectedAlbum, setSelectedAlbum, settingsOpen, setSettingsOpen } = useApp()
   const { loadCollection, selectAlbum } = useDiscogs()
 
   useEffect(() => {
@@ -22,6 +22,29 @@ function AppInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCredentials])
+
+  // Mobile back gesture / button: opening a release pushes a history entry so the
+  // phone's "back" closes the detail and returns to the collection (instead of
+  // leaving the app). Only on the mobile layout, where the detail is full-screen.
+  const prevAlbumRef = useRef(null)
+  useEffect(() => {
+    const wasOpen = !!prevAlbumRef.current
+    const isOpen = !!selectedAlbum
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    if (!wasOpen && isOpen && isMobile && !window.history.state?.vinylAlbum) {
+      window.history.pushState({ vinylAlbum: true }, '')
+    }
+    prevAlbumRef.current = selectedAlbum
+  }, [selectedAlbum])
+
+  useEffect(() => {
+    function onPop() {
+      // Back pressed/swiped → close the open detail (no-op if nothing is open).
+      setSelectedAlbum(null)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [setSelectedAlbum])
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden" style={{ height: '100dvh' }}>
