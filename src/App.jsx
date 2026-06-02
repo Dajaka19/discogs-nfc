@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { App as CapApp } from '@capacitor/app'
 import { AppProvider, useApp } from './context/AppContext'
 import { useDiscogs } from './hooks/useDiscogs'
@@ -55,28 +55,36 @@ function AppInner() {
     return () => window.removeEventListener('popstate', onPop)
   }, [setSelectedAlbum])
 
-  // Native app (Capacitor): handle the vinylnfc:// custom scheme — both cold start
-  // (launched from a tag) and while running. No-op in a plain browser.
+  // Native app (Capacitor): capture the vinylnfc:// release id on launch (cold
+  // start) and while running — independent of credentials, so it's never missed.
+  const [pendingRelease, setPendingRelease] = useState(null)
   useEffect(() => {
-    if (!hasCredentials) return
     let handle
     CapApp.getLaunchUrl()
       .then((res) => {
         const id = releaseIdFromUrl(res?.url)
-        if (id) selectAlbum({ id })
+        if (id) setPendingRelease(id)
       })
       .catch(() => {})
     CapApp.addListener('appUrlOpen', ({ url }) => {
       const id = releaseIdFromUrl(url)
-      if (id) selectAlbum({ id })
+      if (id) setPendingRelease(id)
     })
       .then((h) => {
         handle = h
       })
       .catch(() => {})
     return () => handle?.remove?.()
+  }, [])
+
+  // Apply the pending release once credentials are available.
+  useEffect(() => {
+    if (hasCredentials && pendingRelease) {
+      selectAlbum({ id: pendingRelease })
+      setPendingRelease(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCredentials])
+  }, [hasCredentials, pendingRelease])
 
   return (
     <div
