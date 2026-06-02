@@ -3,6 +3,16 @@ import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
 import { groupTracksByDisc, getDiscLabels } from '../utils/tracklist'
 import { lookupDuration, getCachedDuration } from '../utils/duration'
+
+// Spanish (and other) reissues list a translated title after " = " (a Discogs
+// convention). Strip it for scrobbling so Last.fm gets the canonical title.
+// e.g. "Help! = Socorro" → "Help!". Parentheses are left untouched (they may be
+// versions like "(Live)" / "(Instrumental)").
+function cleanScrobbleTitle(title) {
+  if (!title) return title
+  const i = title.search(/\s+=\s+/)
+  return (i >= 0 ? title.slice(0, i) : title).trim()
+}
 import TrackList from './TrackList'
 import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
@@ -249,11 +259,12 @@ export default function AlbumDetail() {
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
           track._subTracks.forEach((s) => {
-            const scrobbleTitle = s._indexTitle ? `${s._indexTitle} (${s.title})` : s.title
+            const t = cleanScrobbleTitle(s.title)
+            const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
             result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: selectedAlbum?.title })
           })
         } else if (track._isSelectable) {
-          result.push({ ...track, _artist: artist, _album: selectedAlbum?.title })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: selectedAlbum?.title })
         }
       }
     }
@@ -273,12 +284,13 @@ export default function AlbumDetail() {
           track._subTracks.forEach((s) => {
             if (checkedTracks.has(trackKey(s))) {
               // Format: "movement title (Suite Name)" when parent is an index/heading section
-              const scrobbleTitle = s._indexTitle ? `${s._indexTitle} (${s.title})` : s.title
+              const t = cleanScrobbleTitle(s.title)
+              const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
               result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: selectedAlbum?.title })
             }
           })
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
-          result.push({ ...track, _artist: artist, _album: selectedAlbum?.title })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: selectedAlbum?.title })
         }
       }
     }
