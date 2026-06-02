@@ -98,12 +98,20 @@ export function getDiscLabels(release) {
   return labels
 }
 
+// Tracks whose POSITION is a label like "INTRO" (instead of a number) are
+// interludes/intros that should never be scrobbled.
+function isNonScrobblePosition(position) {
+  return /^\s*intro\s*$/i.test(position || '')
+}
+
 function enrichTrack(track, disc) {
+  const noScrobble = isNonScrobblePosition(track.position)
   return {
     ...track,
     _disc: disc,
     _durationSecs: parseDuration(track.duration),
-    _isSelectable: track.type_ === 'track',
+    _isSelectable: track.type_ === 'track' && !noScrobble,
+    _noScrobble: noScrobble,
     _isIndex: track.type_ === 'index',
     _isHeading: track.type_ === 'heading',
   }
@@ -114,7 +122,7 @@ function attachSubTracks(item, track, disc) {
   const indexTitle = item._isIndex || item._isHeading ? track.title : null
   item._subTracks = track.sub_tracks.map((s) => ({
     ...enrichTrack(s, disc),
-    _isSelectable: true,
+    _isSelectable: !isNonScrobblePosition(s.position),
     _isSubTrack: true,
     _parentPosition: track.position,
     _indexTitle: indexTitle,

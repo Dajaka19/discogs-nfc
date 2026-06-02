@@ -12,6 +12,26 @@ export default function TrackItem({ track, checked, indeterminate, onToggle, isS
     ? formatDuration(track._durationSecs)
     : ''
 
+  // INTRO-style tracks: shown but never scrobblable — no checkbox, dimmed, inert.
+  if (track._noScrobble) {
+    return (
+      <div className="flex items-center gap-3 py-1.5 px-2 rounded-md opacity-50">
+        <span className="w-4 shrink-0" />
+        {track.position && (
+          <span className="font-mono text-xs text-text-secondary shrink-0 leading-none whitespace-nowrap min-w-[3.5rem]">
+            {track.position}
+          </span>
+        )}
+        <span className="font-sans text-sm text-text-secondary flex-1 leading-snug italic">
+          {track.title}
+        </span>
+        {duration && (
+          <span className="font-mono text-xs text-text-secondary shrink-0 leading-none">{duration}</span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div
       className="flex items-center gap-3 py-1.5 px-2 rounded-md hover:bg-card-hover transition-colors cursor-pointer"

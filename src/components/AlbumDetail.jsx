@@ -259,6 +259,7 @@ export default function AlbumDetail() {
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
           track._subTracks.forEach((s) => {
+            if (s._isSelectable === false) return // skip INTRO-style sub-tracks
             const t = cleanScrobbleTitle(s.title)
             const scrobbleTitle = s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t
             result.push({ ...s, title: scrobbleTitle, _artist: artist, _album: selectedAlbum?.title })
