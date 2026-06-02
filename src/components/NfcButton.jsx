@@ -2,19 +2,21 @@ import { useState } from 'react'
 
 // NFC tag writing.
 //
-// Tag payload: vinylnfc://release/{id} — scanning/tapping opens the app at that release.
-//
-// Android Chrome: Web NFC API writes the tag directly from the page.
-// iOS: writing requires an external NFC app (e.g. NFC Tools). Use "Copiar enlace"
-//   to copy vinylnfc://release/{id} and paste it there as a URL record.
+// Android Chrome: Web NFC API writes the tag directly from the page — the fastest
+//   path the platform allows (one tap → hold to tag, no app, no setup). The tag
+//   holds the https URL, which opens the installed PWA or Chrome at that release.
+// iOS: the browser can't write NFC. "Copiar enlace" copies the vinylnfc:// app
+//   link to write with an external NFC app for the native iOS app.
+const HTTPS_BASE = 'https://discogs-nfc.vercel.app'
 const SCHEME_BASE = 'vinylnfc://release'
 
 export default function NfcButton({ releaseId }) {
   const [status, setStatus] = useState('idle') // idle | writing | done | error | copied
   const [showHelp, setShowHelp] = useState(false)
 
-  const tagUrl = `${SCHEME_BASE}/${releaseId}`
   const supportsWebNfc = typeof window !== 'undefined' && 'NDEFReader' in window
+  // Android → https (opens PWA/Chrome). iOS → app scheme (opens the native app).
+  const tagUrl = supportsWebNfc ? `${HTTPS_BASE}?release=${releaseId}` : `${SCHEME_BASE}/${releaseId}`
 
   const handleWrite = async () => {
     if (supportsWebNfc) {
@@ -105,17 +107,19 @@ export default function NfcButton({ releaseId }) {
         )}
       </button>
 
-      {/* How-to toggle */}
-      <button
-        onClick={() => setShowHelp((s) => !s)}
-        title="Cómo grabar el tag"
-        className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-text-secondary hover:text-white hover:border-accent/40 transition-all text-xs font-mono"
-      >
-        ?
-      </button>
+      {/* How-to toggle (iOS only — Android writes directly) */}
+      {!supportsWebNfc && (
+        <button
+          onClick={() => setShowHelp((s) => !s)}
+          title="Cómo grabar el tag"
+          className="w-7 h-7 flex items-center justify-center rounded-full border border-border text-text-secondary hover:text-white hover:border-accent/40 transition-all text-xs font-mono"
+        >
+          ?
+        </button>
+      )}
     </div>
 
-      {showHelp && (
+      {showHelp && !supportsWebNfc && (
         <div className="bg-card/80 border border-border rounded-xl p-3 text-xs font-sans text-text-secondary space-y-1.5 fade-in max-w-sm">
           <p className="text-white font-medium">Grabar el tag (gratis, con NFC Tools):</p>
           <ol className="space-y-1 list-decimal list-inside">
