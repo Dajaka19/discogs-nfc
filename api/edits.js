@@ -13,14 +13,16 @@ export default async function handler(req, res) {
     return
   }
 
-  let redis
-  try {
-    redis = Redis.fromEnv()
-  } catch {
-    // KV not configured yet — let the client fall back to local-only storage.
+  // Support both Vercel-KV (KV_REST_API_*) and Upstash-direct (UPSTASH_REDIS_REST_*)
+  // env var names, depending on how the store was connected.
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
+  if (!url || !token) {
+    // Not configured yet — let the client fall back to local-only storage.
     res.status(503).json({ error: 'storage not configured' })
     return
   }
+  const redis = new Redis({ url, token })
 
   const key = `edits:${user}`
   try {
