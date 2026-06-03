@@ -228,7 +228,6 @@ export default function AlbumDetail() {
   //    first heading ("Metropolis Pt.2…") is the real disc title.
   //  - no heading → the format name.
   const mergedDiscLabels = useMemo(() => {
-    const isGeneric = (f) => !f || f.toLowerCase() === 'cd'
     const result = {}
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
@@ -258,11 +257,26 @@ export default function AlbumDetail() {
         result[disc] = headings.map((h) => h.title).join(' | ')
         continue
       }
+      // A heading only NAMES the disc when the whole disc sits under it — i.e.
+      // the disc STARTS with that heading and everything below it belongs to it
+      // (e.g. each CD of a box set is "<album>" then its tracks). A heading that
+      // appears partway through is a song suite/section, not the disc's name
+      // (e.g. "2112" on side B of a Rush LP).
+      //
+      // The reliable signal: numeric "disc-track" positions ("1-1", "4-1") mean
+      // the leading heading is the disc's album; side-letter positions ("A1",
+      // "C1-I") mean the headings are content sections within the side, so they
+      // never name the disc.
+      const firstIsHeading =
+        tracks[0] && (tracks[0]._isIndex || tracks[0]._isHeading) && !tracks[0]._hasSubTracks
+      const firstLeaf = tracks.find((t) => !(t._isIndex || t._isHeading) || t._hasSubTracks)
+      const firstLeafPos = firstLeaf?._hasSubTracks
+        ? firstLeaf._subTracks?.[0]?.position
+        : firstLeaf?.position
+      const numericDiscPos = /^\d/.test(firstLeafPos || '')
+      const leadHeading = firstIsHeading && numericDiscPos ? tracks[0] : null
       const fmt = discLabels[disc]
-      let label
-      if (headings.length === 0) label = fmt
-      else if (headings.length === 1) label = headings[0].title
-      else label = isGeneric(fmt) ? headings[0].title : fmt
+      const label = leadHeading ? leadHeading.title : fmt
       if (label) result[disc] = label
     }
     return result
