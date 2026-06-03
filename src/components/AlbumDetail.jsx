@@ -37,7 +37,7 @@ import ScrobbleButton from './ScrobbleButton'
 import NfcButton from './NfcButton'
 
 export default function AlbumDetail() {
-  const { selectedAlbum, setSelectedAlbum } = useApp()
+  const { selectedAlbum, setSelectedAlbum, prefs } = useApp()
   const [checkedTracks, setCheckedTracks] = useState(new Set())
   const [selectedDisc, setSelectedDisc] = useState(0)  // 0 = All Discs
   const [resolvedDurations, setResolvedDurations] = useState({}) // trackKey -> seconds (from MusicBrainz)
@@ -157,7 +157,9 @@ export default function AlbumDetail() {
       )
       // Special case: The Cure — Trilogy (release 608601). Each DVD holds two
       // "Set" sections; show both joined instead of the generic "DVD".
-      if (selectedAlbum?.id === 608601 && headings.length > 1) {
+      // Also when the hidden "join disc headings" preference is enabled, any disc
+      // with several headings shows them all joined with " | ".
+      if ((selectedAlbum?.id === 608601 || prefs?.joinDiscHeadings) && headings.length > 1) {
         result[disc] = headings.map((h) => h.title).join(' | ')
         continue
       }
@@ -169,7 +171,7 @@ export default function AlbumDetail() {
       if (label) result[disc] = label
     }
     return result
-  }, [discGroups, discLabels])
+  }, [discGroups, discLabels, selectedAlbum, prefs?.joinDiscHeadings])
 
   const artist = selectedAlbum?.artists
     ?.map((a) => a.name?.replace(/ \(\d+\)$/, ''))

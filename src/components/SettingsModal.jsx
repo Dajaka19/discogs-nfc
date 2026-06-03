@@ -4,10 +4,11 @@ import { getToken, getSession } from '../utils/lastfm'
 import { useDiscogs } from '../hooks/useDiscogs'
 
 export default function SettingsModal({ onClose }) {
-  const { credentials, saveCredentials, hasCredentials } = useApp()
+  const { credentials, saveCredentials, hasCredentials, prefs, setPrefs } = useApp()
   const { loadCollection } = useDiscogs()
 
   const [form, setForm] = useState({ ...credentials })
+  const [showAdvanced, setShowAdvanced] = useState(false)
   // Web auth flow state: idle → getting-token → awaiting-user → getting-session → done
   const [authStep, setAuthStep] = useState('idle')
   const [pendingToken, setPendingToken] = useState(null)
@@ -80,7 +81,13 @@ export default function SettingsModal({ onClose }) {
         <div className="p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="font-serif text-xl text-white">Settings</h2>
+            <h2
+              className="font-serif text-xl text-white cursor-pointer select-none"
+              onClick={() => setShowAdvanced((s) => !s)}
+              title="Avanzado"
+            >
+              Settings
+            </h2>
             {hasCredentials && (
               <button
                 onClick={onClose}
@@ -268,6 +275,35 @@ export default function SettingsModal({ onClose }) {
               )}
             </div>
           </section>
+
+          {/* Advanced (hidden) — revealed by tapping the "Settings" title */}
+          {showAdvanced && (
+            <section className="border-t border-border pt-4">
+              <h3 className="font-sans text-sm font-medium text-white mb-3">Avanzado</h3>
+              <button
+                onClick={() => setPrefs({ joinDiscHeadings: !prefs?.joinDiscHeadings })}
+                className="w-full flex items-center justify-between gap-3 text-left"
+              >
+                <span className="text-sm font-sans text-text-secondary pr-2">
+                  Nombre del disco = todos sus headings
+                  <span className="block text-xs opacity-60 mt-0.5">
+                    Discos con varias secciones muestran los headings unidos (p. ej. “Pornography Set | Disintegration Set”).
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 w-10 h-6 rounded-full p-0.5 transition-colors ${
+                    prefs?.joinDiscHeadings ? 'bg-accent' : 'bg-border'
+                  }`}
+                >
+                  <span
+                    className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                      prefs?.joinDiscHeadings ? 'translate-x-4' : ''
+                    }`}
+                  />
+                </span>
+              </button>
+            </section>
+          )}
 
           {/* Save button */}
           <button

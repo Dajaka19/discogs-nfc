@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   credentials: 'vinyl_credentials',
   releaseCache: 'vinyl_release_cache',
   collection: 'vinyl_collection',
+  prefs: 'vinyl_prefs',
 }
 
 const MAX_CACHE_ENTRIES = 200
@@ -74,6 +75,22 @@ export function AppProvider({ children }) {
     localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify(creds))
   }, [])
 
+  // App preferences (advanced/hidden options).
+  const [prefs, setPrefsState] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.prefs, { joinDiscHeadings: false })
+  )
+  const setPrefs = useCallback((next) => {
+    setPrefsState((prev) => {
+      const merged = { ...prev, ...next }
+      try {
+        localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(merged))
+      } catch {
+        /* ignore */
+      }
+      return merged
+    })
+  }, [])
+
   const cacheRelease = useCallback((id, detail) => {
     setReleaseCacheState((prev) => {
       const next = evictOldestIfNeeded({
@@ -111,6 +128,8 @@ export function AppProvider({ children }) {
         cacheRelease,
         settingsOpen,
         setSettingsOpen,
+        prefs,
+        setPrefs,
       }}
     >
       {children}
