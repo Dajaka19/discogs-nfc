@@ -132,6 +132,7 @@ export function AppProvider({ children }) {
         const empty =
           (!clean.titles || Object.keys(clean.titles).length === 0) &&
           (!clean.discs || Object.keys(clean.discs).length === 0) &&
+          (!clean.discAsAlbum || Object.keys(clean.discAsAlbum).length === 0) &&
           !clean.joinHeadings
         if (empty) delete next[releaseId]
         else next[releaseId] = clean
