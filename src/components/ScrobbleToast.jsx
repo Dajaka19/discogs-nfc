@@ -29,26 +29,38 @@ function Disc({ kind, color }) {
     return (
       <div className="relative w-[84px] h-[84px]">
         <div
-          className="absolute inset-0 rounded-full scrobble-disc-spin"
+          className="absolute inset-0 rounded-full scrobble-disc-spin overflow-hidden"
           style={{
             backgroundColor: body,
-            backgroundImage:
-              'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.5) 0 1px, rgba(255,255,255,0.05) 1px 2px, transparent 2px 4px)',
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.55)',
+            backgroundImage: [
+              // fine, soft concentric grooves
+              'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, rgba(255,255,255,0.05) 1.6px, rgba(255,255,255,0.05) 2px)',
+              // subtle reflective play-area band
+              'radial-gradient(circle at 50% 50%, transparent 38%, rgba(255,255,255,0.07) 46%, transparent 60%)',
+              // depth: gentle highlight in the middle fading to a darker rim
+              'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.10), transparent 48%, rgba(0,0,0,0.30) 100%)',
+            ].join(', '),
+            boxShadow: 'inset 0 0 1px 1px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px rgba(0,0,0,0.55)',
           }}
         >
           {/* centre label + spindle hole */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[32px] h-[32px] rounded-full flex items-center justify-center"
-            style={{ background: color ? '#0e0e12' : '#f5a623' }}
+            style={{
+              background: color ? '#0e0e12' : '#f5a623',
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
+            }}
           >
-            <div className="w-[5px] h-[5px] rounded-full bg-black/80" />
+            <div className="w-[5px] h-[5px] rounded-full bg-black/85" />
           </div>
         </div>
-        {/* fixed glassy glint */}
+        {/* fixed specular sweep — light reflecting off the surface */}
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.22), transparent 42%)' }}
+          style={{
+            background:
+              'linear-gradient(125deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.04) 26%, transparent 46%, transparent 60%, rgba(255,255,255,0.10) 78%, transparent 90%)',
+          }}
         />
       </div>
     )
