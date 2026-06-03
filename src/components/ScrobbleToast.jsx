@@ -100,20 +100,17 @@ export default function ScrobbleToast({ kind = 'cd', color, count = 0, partial, 
   }, [onDone])
 
   return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[60] flex justify-center px-4 pointer-events-none"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)' }}
-    >
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 pointer-events-none">
       <div
         className={`pointer-events-auto flex items-center gap-4 rounded-2xl border px-5 py-3.5 ${
           show ? 'scrobble-toast-in' : 'scrobble-toast-out'
         }`}
         style={{
-          background: 'rgba(18,18,22,0.92)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
+          background: 'rgba(18,18,22,0.62)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           borderColor: meta.glow + '66',
-          boxShadow: `0 12px 44px ${meta.glow}33, 0 4px 20px rgba(0,0,0,0.55)`,
+          boxShadow: `0 12px 44px ${meta.glow}33, 0 4px 20px rgba(0,0,0,0.45)`,
         }}
       >
         <div className="relative shrink-0">
