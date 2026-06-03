@@ -497,20 +497,6 @@ export default function AlbumDetail() {
           <p className="text-sm text-red-400 font-sans">{selectedAlbum._error}</p>
         )}
 
-        {/* Edit toggle */}
-        {!selectedAlbum._loading && !editing && currentDisc.length > 0 && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 text-xs font-sans text-text-secondary hover:text-accent transition-colors"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-            </svg>
-            Editar release
-          </button>
-        )}
-
         {/* Release editor */}
         {!selectedAlbum._loading && editing && (
           <ReleaseEditor
@@ -565,8 +551,20 @@ export default function AlbumDetail() {
 
         {/* Action bar */}
         {!editing && !selectedAlbum._loading && (
-          <div className="flex flex-wrap items-start gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             {selectedAlbum.id && <NfcButton releaseId={selectedAlbum.id} />}
+            {currentDisc.length > 0 && (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-text-secondary hover:text-white hover:border-accent/40 transition-all text-sm font-sans"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+                Editar
+              </button>
+            )}
           </div>
         )}
 
