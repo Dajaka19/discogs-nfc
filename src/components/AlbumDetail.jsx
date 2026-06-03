@@ -362,7 +362,7 @@ export default function AlbumDetail() {
             <img
               src={artUrl}
               alt={selectedAlbum.title}
-              className="shrink-0 h-28 w-auto max-w-[10rem] rounded-xl object-contain shadow-2xl"
+              className="shrink-0 w-28 h-auto rounded-xl object-contain shadow-2xl"
             />
           ) : (
             <div className="shrink-0 w-28 h-28 rounded-xl overflow-hidden shadow-2xl bg-border">
