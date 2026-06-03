@@ -578,7 +578,13 @@ export default function AlbumDetail() {
             )}
           </div>
 
-          <div className="relative z-20 flex-1 min-w-0 pt-1">
+          <div
+            className="relative z-20 flex-1 min-w-0 pt-1"
+            style={{
+              marginLeft: coverEgg ? 54 : 0,
+              transition: 'margin-left 600ms cubic-bezier(0.16,1,0.3,1)',
+            }}
+          >
             <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">
               {selectedAlbum.title}
             </h2>
