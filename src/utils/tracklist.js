@@ -332,7 +332,14 @@ function applyBoundaryMap(tracklist, map, discs) {
 // are KEPT, so a disc-name heading ("El Mar No Cesa") stays as both a section
 // divider and the source of the disc label.
 function groupByPosition(tracklist) {
-  const rawDiscs = tracklist.map((t) => (t.position ? getDiscNumber(t.position) : null))
+  const rawDiscs = tracklist.map((t) => {
+    if (t.position) return getDiscNumber(t.position)
+    // A blank-position index/heading whose sub_tracks carry positions (e.g. a whole
+    // disc shown as one suite) takes its disc from the first positioned sub-track.
+    const sub = t.sub_tracks?.find((s) => s.position)
+    if (sub) return getDiscNumber(sub.position)
+    return null
+  })
 
   // Resolve blank-position entries (headings / index rows) run by run.
   let i = 0
