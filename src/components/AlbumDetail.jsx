@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
 import { useDiscogs } from '../hooks/useDiscogs'
@@ -49,11 +49,8 @@ export default function AlbumDetail() {
   const { scrobbleState, scrobble, reset } = useLastfm()
   const { refreshRelease } = useDiscogs()
 
-  // Long-press on "Ver en Discogs" → re-fetch the release from Discogs (ignoring
-  // the local cache) to pick up changes made to the release itself.
-  const pressTimer = useRef(null)
-  const longPressFired = useRef(false)
-
+  // Re-fetch the release from Discogs (ignoring the local cache) to pick up
+  // changes made to the release itself (new tracks, fixed titles/durations).
   const handleRefresh = useCallback(async () => {
     const id = selectedAlbum?.id
     if (!id || refreshing) return
@@ -66,19 +63,6 @@ export default function AlbumDetail() {
       setRefreshing(false)
     }
   }, [selectedAlbum?.id, refreshing, refreshRelease])
-
-  const startPress = useCallback(() => {
-    longPressFired.current = false
-    clearTimeout(pressTimer.current)
-    pressTimer.current = setTimeout(() => {
-      longPressFired.current = true
-      handleRefresh()
-    }, 550)
-  }, [handleRefresh])
-
-  const cancelPress = useCallback(() => {
-    clearTimeout(pressTimer.current)
-  }, [])
 
   // Per-release edits (track/heading/disc names + per-release join toggle).
   const releaseEdits = edits?.[selectedAlbum?.id] || {}
@@ -603,6 +587,20 @@ export default function AlbumDetail() {
                 Editar
               </button>
             )}
+            {selectedAlbum.id && (
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                title="Recargar el release desde Discogs"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-text-secondary hover:text-white hover:border-accent/40 disabled:opacity-50 transition-all text-sm font-sans"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={refreshing ? 'animate-spin' : ''}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+                {refreshing ? 'Actualizando…' : 'Recargar'}
+              </button>
+            )}
           </div>
         )}
 
@@ -628,18 +626,6 @@ export default function AlbumDetail() {
             href={`https://www.discogs.com/release/${selectedAlbum.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => {
-              // A long press triggers a refresh, not navigation.
-              if (longPressFired.current) {
-                e.preventDefault()
-                longPressFired.current = false
-              }
-            }}
-            onPointerDown={startPress}
-            onPointerUp={cancelPress}
-            onPointerLeave={cancelPress}
-            onContextMenu={(e) => e.preventDefault()}
-            style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
             className="flex items-center justify-between gap-3 px-4 py-3 mb-6 rounded-xl border border-border bg-card/60 hover:bg-card hover:border-accent/40 transition-all group"
           >
             <span className="flex items-center gap-2 text-sm font-sans text-text-secondary group-hover:text-white transition-colors">
@@ -647,17 +633,11 @@ export default function AlbumDetail() {
                 <circle cx="12" cy="12" r="9" />
                 <circle cx="12" cy="12" r="2.5" />
               </svg>
-              {refreshing ? 'Actualizando release…' : 'Ver en Discogs'}
+              Ver en Discogs
             </span>
-            {refreshing ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent animate-spin">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary group-hover:text-accent transition-colors">
-                <path d="M7 17L17 7M17 7H9M17 7v8" />
-              </svg>
-            )}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-secondary group-hover:text-accent transition-colors">
+              <path d="M7 17L17 7M17 7H9M17 7v8" />
+            </svg>
           </a>
         )}
       </div>
