@@ -48,8 +48,10 @@ export function getDiscNumber(position) {
   const cdMatch = position.match(/^[A-Za-z]+(\d+)\./i)
   if (cdMatch) return parseInt(cdMatch[1])
 
-  // Side letter: A,B = disc 1 ; C,D = disc 2 ; E,F = disc 3
-  const letterMatch = position.match(/^([A-Fa-f])\d/i)
+  // Side letter: A,B = disc 1 ; C,D = disc 2 ; E,F = disc 3.
+  // The side letter may be followed by a track number ("A1", "C1-I") OR, when a
+  // whole side is one suite, by a part marker with no number ("F-I", "F-II").
+  const letterMatch = position.match(/^([A-Fa-f])(?:\d|-|$)/)
   if (letterMatch) {
     const idx = 'ABCDEF'.indexOf(letterMatch[1].toUpperCase())
     return Math.floor(idx / 2) + 1
