@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
-import { groupTracksByDisc, getDiscLabels } from '../utils/tracklist'
+import { groupTracksByDisc, getDiscLabels, trackArtistString } from '../utils/tracklist'
 import { lookupDuration, getCachedDuration } from '../utils/duration'
 
 // Spanish (and other) reissues list a translated title after " = " (a Discogs
@@ -20,13 +20,14 @@ function buildScrobbleList(tracks, artist, album) {
   const out = []
   for (const track of tracks) {
     if (track._hasSubTracks && track._subTracks) {
+      const parentArtist = trackArtistString(track.artists)
       for (const s of track._subTracks) {
         if (s._isSelectable === false) continue
         const t = cleanScrobbleTitle(s.title)
-        out.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: artist, _album: album })
+        out.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: album })
       }
     } else if (track._isSelectable) {
-      out.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: album })
+      out.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: album })
     }
   }
   return out
@@ -296,14 +297,15 @@ export default function AlbumDetail() {
     for (const disc of Object.values(discGroups)) {
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
+          const parentArtist = trackArtistString(track.artists)
           track._subTracks.forEach((s) => {
             if (s._isSelectable !== false && checkedTracks.has(trackKey(s))) {
               const t = cleanScrobbleTitle(s.title)
-              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: artist, _album: albumTitleClean })
+              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: albumTitleClean })
             }
           })
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: artist, _album: albumTitleClean })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: albumTitleClean })
         }
       }
     }

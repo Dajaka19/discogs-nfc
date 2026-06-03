@@ -9,6 +9,22 @@ export function parseDuration(str) {
   return null
 }
 
+// Per-track artist credit (compilations / various-artists releases). Discogs puts
+// the separator in each artist's `join` field. Returns "" when a track has no
+// own artists (normal single-artist albums).
+export function trackArtistString(artists) {
+  if (!Array.isArray(artists) || artists.length === 0) return ''
+  let out = ''
+  for (const a of artists) {
+    out += (a.name || '').replace(/ \(\d+\)$/, '')
+    if (a.join) {
+      const j = a.join.trim()
+      out += j === ',' ? ', ' : ` ${j} `
+    }
+  }
+  return out.trim()
+}
+
 export function formatDuration(seconds) {
   if (!seconds || seconds < 0) return ''
   const m = Math.floor(seconds / 60)

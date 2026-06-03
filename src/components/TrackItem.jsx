@@ -1,9 +1,10 @@
-import { formatDuration } from '../utils/tracklist'
+import { formatDuration, trackArtistString } from '../utils/tracklist'
 import RoundCheckbox from './RoundCheckbox'
 
 // A single track row with checkbox, position, title, duration.
 // Used for both normal tracks and sub-tracks (isSubTrack adds indent).
 export default function TrackItem({ track, checked, indeterminate, onToggle, isSubTrack }) {
+  const artistStr = trackArtistString(track.artists)
   // Show a time only when it's actually known (Discogs or a MusicBrainz lookup).
   // Unknown duration (_durationSecs == null) → render nothing.
   const duration = track._totalDuration
@@ -46,6 +47,7 @@ export default function TrackItem({ track, checked, indeterminate, onToggle, isS
       )}
 
       <span className="font-sans text-sm text-white flex-1 leading-snug">
+        {artistStr && <span className="text-text-secondary">{artistStr} – </span>}
         {track.title}
         {track._hasSubTracks && (
           <span className="ml-1.5 text-xs text-text-secondary font-sans">
