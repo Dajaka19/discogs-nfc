@@ -4,8 +4,23 @@ import { useApp } from '../context/AppContext'
 export function useCollection(searchQuery = '', sortBy = 'added') {
   const { collection } = useApp()
 
+  // A Discogs collection can hold several copies (instances) of the exact same
+  // release — same release id. Show each release only once.
+  const deduped = useMemo(() => {
+    const seen = new Set()
+    const out = []
+    for (const r of collection) {
+      const id = r.id || r.basic_information?.id
+      if (id == null) { out.push(r); continue }
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push(r)
+    }
+    return out
+  }, [collection])
+
   const filtered = useMemo(() => {
-    let result = collection
+    let result = deduped
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -37,7 +52,7 @@ export function useCollection(searchQuery = '', sortBy = 'added') {
           return (b.date_added || '').localeCompare(a.date_added || '')
       }
     })
-  }, [collection, searchQuery, sortBy])
+  }, [deduped, searchQuery, sortBy])
 
-  return { filtered, total: collection.length }
+  return { filtered, total: deduped.length }
 }
