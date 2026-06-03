@@ -67,5 +67,18 @@ export function useDiscogs() {
     [credentials, releaseCache, cacheRelease, setSelectedAlbum]
   )
 
-  return { loadCollection, selectAlbum }
+  // Force a fresh fetch from Discogs, ignoring the cache — picks up edits made
+  // to the release on Discogs itself (new tracks, fixed titles, durations, …).
+  const refreshRelease = useCallback(
+    async (id) => {
+      if (!id) return
+      const detail = await fetchReleaseDetail(id, credentials.discogsToken)
+      cacheRelease(id, detail)
+      setSelectedAlbum(detail)
+      return detail
+    },
+    [credentials, cacheRelease, setSelectedAlbum]
+  )
+
+  return { loadCollection, selectAlbum, refreshRelease }
 }
