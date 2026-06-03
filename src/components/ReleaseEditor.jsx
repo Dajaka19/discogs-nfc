@@ -40,9 +40,16 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
       const el = refs.current[f.id]
       if (!el) continue
       const v = el.value
-      if (!v.trim() || v === f.original) continue
-      if (f.kind === 'title') titles[f.key] = v
-      else discs[f.key] = v
+      if (f.kind === 'title') {
+        if (!v.trim() || v === f.original) continue
+        titles[f.key] = v
+      } else {
+        // Disc name: an empty field intentionally REMOVES the auto-label
+        // (shows just "Disc N"). Store '' so it overrides the default.
+        const trimmed = v.trim()
+        if (trimmed === (f.original || '')) continue
+        discs[f.key] = trimmed ? v : ''
+      }
     }
     // Keep only the discs actually marked as "use as album".
     const discAsAlbumClean = {}
@@ -136,8 +143,11 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
                   ref={register('disc:' + dk, 'disc', dk, discLabel)}
                   className={`${baseInput} border border-accent/40 font-medium focus:border-accent`}
                   defaultValue={initDiscs[dk] ?? discLabel}
-                  placeholder={discLabel || `Disco ${dk}`}
+                  placeholder={`Vacío → solo «Disco ${dk}»`}
                 />
+                <p className="mt-1 text-[10px] text-text-secondary font-sans">
+                  Déjalo vacío para quitar el nombre (mostrará solo «Disco {dk}»).
+                </p>
                 {/* Use this disc's name as the scrobble album (box sets) */}
                 <button
                   type="button"

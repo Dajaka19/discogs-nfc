@@ -233,8 +233,10 @@ export default function AlbumDetail() {
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
       // Per-release manual disc name takes precedence (doesn't touch headings).
-      if (releaseEdits.discs?.[disc]) {
-        result[disc] = releaseEdits.discs[disc]
+      // An explicit '' means the user cleared it → no label at all (just "Disc N").
+      if (releaseEdits.discs?.[disc] !== undefined) {
+        const manual = releaseEdits.discs[disc]
+        if (manual) result[disc] = manual
         continue
       }
       // A disc that is a single top-level suite/section (an index/heading, even
