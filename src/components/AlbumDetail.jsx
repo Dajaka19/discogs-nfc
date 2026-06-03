@@ -384,7 +384,7 @@ export default function AlbumDetail() {
   if (!selectedAlbum) return null
 
   return (
-    <div className="relative min-h-full">
+    <div className="relative md:min-h-full">
       {/* Dynamic blurred art background */}
       {artUrl && (
         <div
