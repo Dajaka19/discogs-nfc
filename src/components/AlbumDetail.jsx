@@ -38,6 +38,44 @@ import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
 import NfcButton from './NfcButton'
 import ReleaseEditor from './ReleaseEditor'
+import ScrobbleToast from './ScrobbleToast'
+
+// Discogs vinyl "colour" words (in format.text / descriptions) → a display hex.
+const VINYL_COLORS = {
+  black: '#1a1a1a', red: '#d8392b', blue: '#2f6bd8', 'light blue': '#7fb3ff',
+  green: '#2fa84f', yellow: '#e8c93a', orange: '#e87a2d', purple: '#8b3ce0',
+  violet: '#8b3ce0', pink: '#e84d9a', magenta: '#e0309a', white: '#eaeaea',
+  gold: '#d4af37', golden: '#d4af37', silver: '#c4c4c4', grey: '#8a8a8a',
+  gray: '#8a8a8a', clear: '#cfe8ff', transparent: '#cfe8ff', amber: '#ff8c1a',
+  turquoise: '#30d5c8', brown: '#7a4a2b', cream: '#f0e3c0', bone: '#f0e3c0',
+}
+
+// Pick a scrobble-toast disc style from the release formats.
+function detectFormatInfo(formats = []) {
+  const names = formats.map((f) => (f.name || '').toLowerCase())
+  const extra = formats
+    .flatMap((f) => [(f.text || ''), ...(f.descriptions || [])])
+    .map((x) => x.toLowerCase())
+  const all = [...names, ...extra].join(' ')
+
+  let kind = 'cd'
+  if (names.some((n) => n.includes('vinyl'))) kind = 'vinyl'
+  else if (all.includes('sacd') || all.includes('super audio')) kind = 'sacd'
+  else if (all.includes('blu-ray') || all.includes('bluray') || all.includes('blu ray')) kind = 'bluray'
+  else if (names.some((n) => n.includes('dvd'))) kind = 'dvd'
+  else if (names.some((n) => n.includes('cd'))) kind = 'cd'
+
+  let color = null
+  if (kind === 'vinyl') {
+    const text = extra.join(' ')
+    // Prefer multi-word matches first (e.g. "light blue" before "blue").
+    const found = Object.keys(VINYL_COLORS)
+      .sort((a, b) => b.length - a.length)
+      .find((c) => text.includes(c))
+    if (found) color = VINYL_COLORS[found]
+  }
+  return { kind, color }
+}
 
 export default function AlbumDetail() {
   const { selectedAlbum, setSelectedAlbum, prefs, edits, saveReleaseEdits } = useApp()
@@ -46,6 +84,7 @@ export default function AlbumDetail() {
   const [resolvedDurations, setResolvedDurations] = useState({}) // trackKey -> seconds (from MusicBrainz)
   const [editing, setEditing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [toast, setToast] = useState(null) // scrobble-success popup
   const { scrobbleState, scrobble, reset } = useLastfm()
   const { refreshRelease } = useDiscogs()
 
@@ -418,10 +457,21 @@ export default function AlbumDetail() {
       ? `Scrobble ${checkedTracks.size} pista${checkedTracks.size !== 1 ? 's' : ''}`
       : `Scrobble ${selectedDisc === 0 ? 'álbum' : 'disco'}`
 
-  // Clear the selection once a scrobble completes (success or partial).
+  // Format-dependent disc style for the success popup.
+  const formatInfo = useMemo(() => detectFormatInfo(selectedAlbum?.formats), [selectedAlbum?.formats])
+
+  // Clear the selection once a scrobble completes (success or partial), and
+  // show the flashy success popup.
   useEffect(() => {
     if (scrobbleState.status === 'success' || scrobbleState.status === 'partial') {
       setCheckedTracks(new Set())
+      setToast({
+        id: Date.now(),
+        kind: formatInfo.kind,
+        color: formatInfo.color,
+        count: scrobbleState.total,
+        partial: scrobbleState.status === 'partial',
+      })
     }
   }, [scrobbleState.status])
 
@@ -667,6 +717,17 @@ export default function AlbumDetail() {
           </a>
         )}
       </div>
+
+      {toast && (
+        <ScrobbleToast
+          key={toast.id}
+          kind={toast.kind}
+          color={toast.color}
+          count={toast.count}
+          partial={toast.partial}
+          onDone={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
