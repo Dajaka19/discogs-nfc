@@ -11,14 +11,14 @@ import { createPortal } from 'react-dom'
 const KIND_META = {
   vinyl: { label: 'Vinilo', glow: '#f5a623' },
   cd: { label: 'CD', glow: '#cdd9e6' },
-  dvd: { label: 'DVD', glow: '#8b5cf6' },
+  dvd: { label: 'DVD', glow: '#cdc6d4' },
   bluray: { label: 'Blu-ray', glow: '#3b82f6' },
   sacd: { label: 'SACD', glow: '#e8c34a' },
 }
 
 const OPTICAL_GRADIENT = {
   cd: 'conic-gradient(from 0deg, #b9c7d6, #f3c6e0, #c6e0f3, #c6f3d6, #f3edc6, #d6c6f3, #b9c7d6)',
-  dvd: 'conic-gradient(from 0deg, #3a2a5a, #7c5cc4, #b9a6e8, #5a3a9a, #2a1a4a, #7c5cc4, #3a2a5a)',
+  dvd: 'conic-gradient(from 0deg, #b8b8c0, #e6dce8, #cfc4d2, #d8d4dc, #efe6ee, #c6bcca, #b8b8c0)',
   bluray: 'conic-gradient(from 0deg, #0e2a6a, #2b6ef0, #69b0ff, #134fd0, #0e2a6a, #2b6ef0, #0e2a6a)',
   sacd: 'conic-gradient(from 0deg, #8a6a16, #e8c34a, #fff0b0, #d4af37, #a37b1e, #e8c34a, #8a6a16)',
 }
