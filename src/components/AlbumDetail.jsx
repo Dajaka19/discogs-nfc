@@ -267,14 +267,21 @@ export default function AlbumDetail() {
       // the leading heading is the disc's album; side-letter positions ("A1",
       // "C1-I") mean the headings are content sections within the side, so they
       // never name the disc.
-      const firstIsHeading =
-        tracks[0] && (tracks[0]._isIndex || tracks[0]._isHeading) && !tracks[0]._hasSubTracks
+      const isHead = (t) => t && (t._isIndex || t._isHeading) && !t._hasSubTracks
+      const firstIsHeading = isHead(tracks[0])
       const firstLeaf = tracks.find((t) => !(t._isIndex || t._isHeading) || t._hasSubTracks)
       const firstLeafPos = firstLeaf?._hasSubTracks
         ? firstLeaf._subTracks?.[0]?.position
         : firstLeaf?.position
       const numericDiscPos = /^\d/.test(firstLeafPos || '')
-      const leadHeading = firstIsHeading && numericDiscPos ? tracks[0] : null
+      // The leading heading wraps the WHOLE disc only when it's the disc's sole
+      // heading, OR it is immediately followed by a sub-heading (an album title
+      // over "Act"/"Part" sections, e.g. Dream Theater's "Metropolis Pt 2").
+      // If it's followed by a track and another heading appears later, that later
+      // heading starts content OUTSIDE it — so the heading is just a section
+      // (e.g. "The Dark Side Of The Moon" on Pulse disc 2, "2112" on a Rush side).
+      const leadWrapsDisc = firstIsHeading && (headings.length === 1 || isHead(tracks[1]))
+      const leadHeading = leadWrapsDisc && numericDiscPos ? tracks[0] : null
       const fmt = discLabels[disc]
       const label = leadHeading ? leadHeading.title : fmt
       if (label) result[disc] = label
