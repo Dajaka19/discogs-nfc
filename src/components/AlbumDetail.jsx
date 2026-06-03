@@ -273,7 +273,10 @@ export default function AlbumDetail() {
       const firstLeafPos = firstLeaf?._hasSubTracks
         ? firstLeaf._subTracks?.[0]?.position
         : firstLeaf?.position
-      const numericDiscPos = /^\d/.test(firstLeafPos || '')
+      // A vinyl SIDE position is a single letter + digit ("A1", "C1-I"); there the
+      // headings are song suites within the side, never the disc's name. Prefix
+      // ("CD-1", "DVD-1") and numeric ("1-1") positions are real discs/sections.
+      const sideLetterPos = /^[A-Z]\d/.test(firstLeafPos || '')
       // The leading heading wraps the WHOLE disc only when it's the disc's sole
       // heading, OR it is immediately followed by a sub-heading (an album title
       // over "Act"/"Part" sections, e.g. Dream Theater's "Metropolis Pt 2").
@@ -281,7 +284,7 @@ export default function AlbumDetail() {
       // heading starts content OUTSIDE it — so the heading is just a section
       // (e.g. "The Dark Side Of The Moon" on Pulse disc 2, "2112" on a Rush side).
       const leadWrapsDisc = firstIsHeading && (headings.length === 1 || isHead(tracks[1]))
-      const leadHeading = leadWrapsDisc && numericDiscPos ? tracks[0] : null
+      const leadHeading = leadWrapsDisc && !sideLetterPos ? tracks[0] : null
       const fmt = discLabels[disc]
       const label = leadHeading ? leadHeading.title : fmt
       if (label) result[disc] = label
