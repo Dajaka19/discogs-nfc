@@ -155,6 +155,12 @@ export default function AlbumDetail() {
       const headings = tracks.filter(
         (t) => (t._isIndex || t._isHeading) && !t._hasSubTracks
       )
+      // Special case: The Cure — Trilogy (release 608601). Each DVD holds two
+      // "Set" sections; show both joined instead of the generic "DVD".
+      if (selectedAlbum?.id === 608601 && headings.length > 1) {
+        result[disc] = headings.map((h) => h.title).join(' | ')
+        continue
+      }
       const fmt = discLabels[disc]
       let label
       if (headings.length === 0) label = fmt
