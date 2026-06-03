@@ -304,6 +304,20 @@ export default function AlbumDetail() {
     scrobble(tracks, artist, albumTitleClean)
   }, [checkedTracks, selectedTracksForScrobble, currentDiscForScrobble, scrobble, artist, albumTitleClean])
 
+  // Whole album (all discs) — for the header "Scrobble album" button.
+  const allTracksForScrobble = useMemo(
+    () => buildScrobbleList(allDiscsTracks, artist, albumTitleClean),
+    [allDiscsTracks, artist, albumTitleClean]
+  )
+  const handleScrobbleAll = useCallback(() => {
+    scrobble(allTracksForScrobble, artist, albumTitleClean)
+  }, [scrobble, allTracksForScrobble, artist, albumTitleClean])
+
+  const scrobbleLabel =
+    checkedTracks.size > 0
+      ? `Scrobble ${checkedTracks.size} pista${checkedTracks.size !== 1 ? 's' : ''}`
+      : `Scrobble ${selectedDisc === 0 ? 'álbum' : 'disco'}`
+
   if (!selectedAlbum) return null
 
   return (
@@ -365,6 +379,26 @@ export default function AlbumDetail() {
               <p className="font-mono text-xs text-text-secondary mt-1 opacity-70">{formatName}</p>
             )}
           </div>
+
+          {/* One-tap scrobble entire album — top-right of header */}
+          {!selectedAlbum._loading && allTracksForScrobble.length > 0 && (
+            <button
+              onClick={handleScrobbleAll}
+              disabled={scrobbleState.status === 'loading'}
+              title={`Scrobble all ${allTracksForScrobble.length} tracks`}
+              className="shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all group"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                className="text-text-secondary group-hover:text-accent transition-colors">
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              <span className="text-xs font-sans text-text-secondary group-hover:text-accent transition-colors leading-none">
+                Scrobble<br />album
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Genres + styles */}
@@ -415,6 +449,22 @@ export default function AlbumDetail() {
               onGroupToggle={handleGroupToggle}
               onSelectAll={handleSelectAll}
               onDeselectAll={handleDeselectAll}
+              onScrobble={handleScrobble}
+              scrobbleLabel={scrobbleLabel}
+              scrobbling={scrobbleState.status === 'loading'}
+            />
+          </div>
+        )}
+
+        {/* Scrobble status feedback (loading / success / error) */}
+        {!selectedAlbum._loading && scrobbleState.status !== 'idle' && (
+          <div className="pt-1">
+            <ScrobbleButton
+              checkedCount={checkedTracks.size}
+              fallbackCount={currentDiscForScrobble.length}
+              scrobbleState={scrobbleState}
+              onScrobble={handleScrobble}
+              onReset={reset}
             />
           </div>
         )}
@@ -422,14 +472,6 @@ export default function AlbumDetail() {
         {/* Action bar */}
         {!selectedAlbum._loading && (
           <div className="flex flex-wrap items-start gap-3 pt-1">
-            <ScrobbleButton
-              checkedCount={checkedTracks.size}
-              fallbackCount={currentDiscForScrobble.length}
-              fallbackLabel={selectedDisc === 0 ? 'álbum' : 'disco'}
-              scrobbleState={scrobbleState}
-              onScrobble={handleScrobble}
-              onReset={reset}
-            />
             {selectedAlbum.id && <NfcButton releaseId={selectedAlbum.id} />}
           </div>
         )}

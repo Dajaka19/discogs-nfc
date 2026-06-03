@@ -13,7 +13,7 @@ function collectSelectables(sectionTracks) {
   return result
 }
 
-export default function TrackList({ tracks, checkedTracks, onToggle, onGroupToggle, onSelectAll, onDeselectAll }) {
+export default function TrackList({ tracks, checkedTracks, onToggle, onGroupToggle, onSelectAll, onDeselectAll, onScrobble, scrobbleLabel, scrobbling }) {
   // Selectable leaf keys across this disc — for the compact "select all" toggle.
   const selectableKeys = useMemo(() => {
     const keys = []
@@ -62,7 +62,7 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
 
   return (
     <div className="space-y-1">
-      {/* Header row — compact "select all" toggle + selected duration */}
+      {/* Header row — compact "select all" toggle (left) + scrobble (right) */}
       <div className="flex items-center justify-between mb-3">
         <button
           onClick={() => (allChecked ? onDeselectAll() : onSelectAll())}
@@ -72,9 +72,25 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
           <RoundCheckbox checked={allChecked} indeterminate={someChecked && !allChecked} onChange={() => (allChecked ? onDeselectAll() : onSelectAll())} />
           <span className="text-xs font-sans text-text-secondary group-hover:text-white transition-colors">Todas</span>
         </button>
-        {selectedDuration > 0 && (
-          <span className="font-mono text-xs text-text-secondary">{formatDuration(selectedDuration)}</span>
-        )}
+        <div className="flex items-center gap-3">
+          {selectedDuration > 0 && (
+            <span className="font-mono text-xs text-text-secondary">{formatDuration(selectedDuration)}</span>
+          )}
+          {onScrobble && (
+            <button
+              onClick={onScrobble}
+              disabled={scrobbling}
+              className="flex items-center gap-1 text-xs font-sans font-medium text-accent hover:brightness-110 disabled:opacity-50 transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              {scrobbleLabel}
+            </button>
+          )}
+        </div>
       </div>
 
       {sections.map((section, si) => {
