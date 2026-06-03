@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 
 const STORAGE_KEYS = {
   credentials: 'vinyl_credentials',
   releaseCache: 'vinyl_release_cache',
   collection: 'vinyl_collection',
   prefs: 'vinyl_prefs',
+  edits: 'vinyl_edits',
 }
 
 const MAX_CACHE_ENTRIES = 200
@@ -91,6 +92,64 @@ export function AppProvider({ children }) {
     })
   }, [])
 
+  // Per-release edits (track/heading/disc names + per-release join toggle),
+  // keyed by release id. Persisted locally for instant/offline use and synced
+  // to the cloud (Vercel KV) by the user's Discogs username.
+  const [edits, setEditsState] = useState(() => loadFromStorage(STORAGE_KEYS.edits, {}))
+
+  const persistEditsLocal = useCallback((all) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.edits, JSON.stringify(all))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  // Pull cloud edits once credentials (the Discogs username key) are available.
+  const discogsUser = credentials.discogsUsername
+  useEffect(() => {
+    if (!discogsUser) return
+    let cancelled = false
+    fetch(`/api/edits?user=${encodeURIComponent(discogsUser)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cloud) => {
+        if (cancelled || !cloud || typeof cloud !== 'object') return
+        if (Object.keys(cloud).length === 0) return
+        setEditsState(cloud)
+        persistEditsLocal(cloud)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [discogsUser, persistEditsLocal])
+
+  const saveReleaseEdits = useCallback(
+    (releaseId, releaseEdits) => {
+      setEditsState((prev) => {
+        const next = { ...prev }
+        const clean = releaseEdits || {}
+        const empty =
+          (!clean.titles || Object.keys(clean.titles).length === 0) &&
+          (!clean.discs || Object.keys(clean.discs).length === 0) &&
+          !clean.joinHeadings
+        if (empty) delete next[releaseId]
+        else next[releaseId] = clean
+        persistEditsLocal(next)
+        // Sync to cloud (best-effort).
+        if (discogsUser) {
+          fetch(`/api/edits?user=${encodeURIComponent(discogsUser)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(next),
+          }).catch(() => {})
+        }
+        return next
+      })
+    },
+    [discogsUser, persistEditsLocal]
+  )
+
   const cacheRelease = useCallback((id, detail) => {
     setReleaseCacheState((prev) => {
       const next = evictOldestIfNeeded({
@@ -130,6 +189,8 @@ export function AppProvider({ children }) {
         setSettingsOpen,
         prefs,
         setPrefs,
+        edits,
+        saveReleaseEdits,
       }}
     >
       {children}

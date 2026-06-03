@@ -82,6 +82,23 @@ NFC writer app. Tapping it will *try* to open the app at that release.
   Universal Links, which require a **paid** Apple Developer account. This free route
   is the closest no-cost attempt.
 
+## Per-release edits (cross-device)
+
+Each release can be edited (✎ "Editar release"): rename tracks, headings and discs,
+and toggle joining a disc's headings with " | ". Edits affect both the listing and
+what gets scrobbled.
+
+Edits are saved locally (localStorage) and synced across devices via a Vercel
+serverless function (`api/edits.js`) backed by Upstash Redis, keyed by your Discogs
+username. One-time setup so sync works:
+
+1. In the Vercel dashboard → your project → **Storage** (Marketplace) → add **Upstash
+   Redis** (free tier) and connect it to the project. It injects
+   `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`.
+2. Redeploy. Now `GET/POST /api/edits?user=<discogsUsername>` reads/writes your edits.
+
+Without Upstash connected, editing still works **on that device only** (localStorage).
+
 ## Tech Stack
 
 - React 18 + Vite 5

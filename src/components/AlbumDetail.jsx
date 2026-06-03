@@ -36,19 +36,26 @@ import TrackList from './TrackList'
 import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
 import NfcButton from './NfcButton'
+import ReleaseEditor from './ReleaseEditor'
 
 export default function AlbumDetail() {
-  const { selectedAlbum, setSelectedAlbum, prefs } = useApp()
+  const { selectedAlbum, setSelectedAlbum, prefs, edits, saveReleaseEdits } = useApp()
   const [checkedTracks, setCheckedTracks] = useState(new Set())
   const [selectedDisc, setSelectedDisc] = useState(0)  // 0 = All Discs
   const [resolvedDurations, setResolvedDurations] = useState({}) // trackKey -> seconds (from MusicBrainz)
+  const [editing, setEditing] = useState(false)
   const { scrobbleState, scrobble, reset } = useLastfm()
+
+  // Per-release edits (track/heading/disc names + per-release join toggle).
+  const releaseEdits = edits?.[selectedAlbum?.id] || {}
+  const titleEdits = releaseEdits.titles || {}
 
   // Reset selection when album changes
   useEffect(() => {
     setCheckedTracks(new Set())
     setSelectedDisc(0)
     setResolvedDurations({})
+    setEditing(false)
     reset()
   }, [selectedAlbum?.id])
 
@@ -57,30 +64,41 @@ export default function AlbumDetail() {
     [selectedAlbum]
   )
 
-  // Overlay any durations resolved from MusicBrainz onto the grouped tracks, so
-  // both the display and the scrobble payload pick them up.
+  // Overlay MusicBrainz durations AND per-release title edits onto the grouped
+  // tracks, so both the display and the scrobble payload pick them up.
   const discGroups = useMemo(() => {
-    if (Object.keys(resolvedDurations).length === 0) return baseDiscGroups
+    const hasDur = Object.keys(resolvedDurations).length > 0
+    const hasTitles = Object.keys(titleEdits).length > 0
+    if (!hasDur && !hasTitles) return baseDiscGroups
+
     const patchLeaf = (t) => {
-      if (t._durationSecs != null) return t
-      const secs = resolvedDurations[t.position || t.title]
-      return secs != null ? { ...t, _durationSecs: secs } : t
+      let nt = t
+      const key = t.position || t.title
+      if (t._durationSecs == null && resolvedDurations[key] != null) nt = { ...nt, _durationSecs: resolvedDurations[key] }
+      if (titleEdits[key]) nt = { ...nt, title: titleEdits[key] }
+      return nt
     }
     const out = {}
     for (const [disc, tracks] of Object.entries(baseDiscGroups)) {
       out[disc] = tracks.map((t) => {
         if (t._hasSubTracks && t._subTracks) {
-          const subs = t._subTracks.map(patchLeaf)
+          const parentKey = t.position || t.title
+          const newParentTitle = titleEdits[parentKey] || t.title
+          const subs = t._subTracks.map((s) => {
+            let ns = patchLeaf(s)
+            if (newParentTitle !== t.title && ns._indexTitle) ns = { ...ns, _indexTitle: newParentTitle }
+            return ns
+          })
           const total = subs.every((s) => s._durationSecs != null)
             ? subs.reduce((sum, s) => sum + s._durationSecs, 0)
             : null
-          return { ...t, _subTracks: subs, _totalDuration: total }
+          return { ...t, title: newParentTitle, _subTracks: subs, _totalDuration: total }
         }
         return patchLeaf(t)
       })
     }
     return out
-  }, [baseDiscGroups, resolvedDurations])
+  }, [baseDiscGroups, resolvedDurations, titleEdits])
 
   // Look up missing durations from MusicBrainz (conservative, rate-limited).
   useEffect(() => {
@@ -153,6 +171,11 @@ export default function AlbumDetail() {
     const result = {}
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
+      // Per-release manual disc name takes precedence (doesn't touch headings).
+      if (releaseEdits.discs?.[disc]) {
+        result[disc] = releaseEdits.discs[disc]
+        continue
+      }
       // A disc that is a single top-level suite/section (an index/heading, even
       // with sub-tracks) takes that section's title — e.g. "Misplaced Childhood
       // Parts 1 & 2".
@@ -163,11 +186,12 @@ export default function AlbumDetail() {
       const headings = tracks.filter(
         (t) => (t._isIndex || t._isHeading) && !t._hasSubTracks
       )
-      // Special case: The Cure — Trilogy (release 608601). Each DVD holds two
-      // "Set" sections; show both joined instead of the generic "DVD".
-      // Also when the hidden "join disc headings" preference is enabled, any disc
-      // with several headings shows them all joined with " | ".
-      if ((selectedAlbum?.id === 608601 || prefs?.joinDiscHeadings) && headings.length > 1) {
+      // Join all section headings with " | " when requested per-release, by the
+      // hidden global pref, or for the Trilogy special case.
+      if (
+        (releaseEdits.joinHeadings || selectedAlbum?.id === 608601 || prefs?.joinDiscHeadings) &&
+        headings.length > 1
+      ) {
         result[disc] = headings.map((h) => h.title).join(' | ')
         continue
       }
@@ -179,7 +203,7 @@ export default function AlbumDetail() {
       if (label) result[disc] = label
     }
     return result
-  }, [discGroups, discLabels, selectedAlbum, prefs?.joinDiscHeadings])
+  }, [discGroups, discLabels, selectedAlbum, prefs?.joinDiscHeadings, releaseEdits])
 
   const artist = selectedAlbum?.artists
     ?.map((a) => a.name?.replace(/ \(\d+\)$/, ''))
@@ -318,6 +342,14 @@ export default function AlbumDetail() {
     }
     return result
   }, [checkedTracks, discGroups, artist, albumTitleClean])
+
+  const handleSaveEdits = useCallback(
+    (draft) => {
+      if (selectedAlbum?.id) saveReleaseEdits(selectedAlbum.id, draft)
+      setEditing(false)
+    },
+    [selectedAlbum, saveReleaseEdits]
+  )
 
   // Scrobble the selection if any track is checked, otherwise the current view.
   const handleScrobble = useCallback(() => {
@@ -465,8 +497,33 @@ export default function AlbumDetail() {
           <p className="text-sm text-red-400 font-sans">{selectedAlbum._error}</p>
         )}
 
+        {/* Edit toggle */}
+        {!selectedAlbum._loading && !editing && currentDisc.length > 0 && (
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1.5 text-xs font-sans text-text-secondary hover:text-accent transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+            Editar release
+          </button>
+        )}
+
+        {/* Release editor */}
+        {!selectedAlbum._loading && editing && (
+          <ReleaseEditor
+            baseDiscGroups={baseDiscGroups}
+            discLabels={mergedDiscLabels}
+            initialEdits={releaseEdits}
+            onSave={handleSaveEdits}
+            onCancel={() => setEditing(false)}
+          />
+        )}
+
         {/* Disc selector */}
-        {!selectedAlbum._loading && discCount > 1 && (
+        {!editing && !selectedAlbum._loading && discCount > 1 && (
           <DiscSelector
             discCount={discCount}
             selectedDisc={selectedDisc}
@@ -477,7 +534,7 @@ export default function AlbumDetail() {
         )}
 
         {/* Tracklist */}
-        {!selectedAlbum._loading && currentDisc.length > 0 && (
+        {!editing && !selectedAlbum._loading && currentDisc.length > 0 && (
           <div className="bg-card/60 backdrop-blur-sm rounded-xl p-4 border border-border/50">
             <TrackList
               tracks={currentDisc}
@@ -494,7 +551,7 @@ export default function AlbumDetail() {
         )}
 
         {/* Scrobble status feedback (loading / success / error) */}
-        {!selectedAlbum._loading && scrobbleState.status !== 'idle' && (
+        {!editing && !selectedAlbum._loading && scrobbleState.status !== 'idle' && (
           <div className="pt-1">
             <ScrobbleButton
               checkedCount={checkedTracks.size}
@@ -507,14 +564,14 @@ export default function AlbumDetail() {
         )}
 
         {/* Action bar */}
-        {!selectedAlbum._loading && (
+        {!editing && !selectedAlbum._loading && (
           <div className="flex flex-wrap items-start gap-3 pt-1">
             {selectedAlbum.id && <NfcButton releaseId={selectedAlbum.id} />}
           </div>
         )}
 
         {/* Convenience scrobble at the end — only for long tracklists (>23) */}
-        {!selectedAlbum._loading && allSelectableKeys.length > 23 && (
+        {!editing && !selectedAlbum._loading && allSelectableKeys.length > 23 && (
           <button
             onClick={handleScrobble}
             disabled={scrobbleState.status === 'loading'}
@@ -530,7 +587,7 @@ export default function AlbumDetail() {
         )}
 
         {/* View on Discogs */}
-        {!selectedAlbum._loading && selectedAlbum.id && (
+        {!editing && !selectedAlbum._loading && selectedAlbum.id && (
           <a
             href={`https://www.discogs.com/release/${selectedAlbum.id}`}
             target="_blank"
