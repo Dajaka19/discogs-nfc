@@ -620,8 +620,10 @@ export default function AlbumDetail() {
               onClick={handleScrobbleAll}
               disabled={scrobbleState.status === 'loading'}
               title={`Scrobble all ${allTracksForScrobble.length} tracks`}
-              className={`shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all group ${
-                coverEgg ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : ''
+              className={`shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] group ${
+                coverEgg
+                  ? 'translate-x-[160px] opacity-0 pointer-events-none md:translate-x-0 md:opacity-100 md:pointer-events-auto'
+                  : 'translate-x-0'
               }`}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
