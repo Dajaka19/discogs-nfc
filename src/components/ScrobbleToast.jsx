@@ -23,9 +23,14 @@ const OPTICAL_GRADIENT = {
   sacd: 'conic-gradient(from 0deg, #8a6a16, #e8c34a, #fff0b0, #d4af37, #a37b1e, #e8c34a, #8a6a16)',
 }
 
-function Disc({ kind, color }) {
+function Disc({ kind, color, translucent }) {
   if (kind === 'vinyl') {
     const body = color || '#15151a'
+    // Translucent / transparent vinyl reads like stained glass: lighter, glassier
+    // grooves and a uniform brightening of the hue.
+    const grooves = translucent
+      ? 'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, rgba(255,255,255,0.12) 1.6px, rgba(255,255,255,0.12) 2px)'
+      : 'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, rgba(255,255,255,0.05) 1.6px, rgba(255,255,255,0.05) 2px)'
     return (
       <div className="relative w-[84px] h-[84px]">
         <div
@@ -33,12 +38,15 @@ function Disc({ kind, color }) {
           style={{
             backgroundColor: body,
             backgroundImage: [
-              // fine, soft concentric grooves
-              'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, rgba(255,255,255,0.05) 1.6px, rgba(255,255,255,0.05) 2px)',
+              // brighten the hue uniformly so it looks "see-through"
+              ...(translucent ? ['linear-gradient(rgba(255,255,255,0.22), rgba(255,255,255,0.22))'] : []),
+              grooves,
               // subtle reflective play-area band
               'radial-gradient(circle at 50% 50%, transparent 38%, rgba(255,255,255,0.07) 46%, transparent 60%)',
               // depth: gentle highlight in the middle fading to a darker rim
-              'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.10), transparent 48%, rgba(0,0,0,0.30) 100%)',
+              translucent
+                ? 'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.18), transparent 55%, rgba(0,0,0,0.16) 100%)'
+                : 'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.10), transparent 48%, rgba(0,0,0,0.30) 100%)',
             ].join(', '),
             boxShadow: 'inset 0 0 1px 1px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px rgba(0,0,0,0.55)',
           }}
@@ -96,7 +104,7 @@ function Disc({ kind, color }) {
   )
 }
 
-export default function ScrobbleToast({ kind = 'cd', color, count = 0, partial, onDone }) {
+export default function ScrobbleToast({ kind = 'cd', color, translucent, count = 0, partial, onDone }) {
   const [show, setShow] = useState(false)
   const meta = KIND_META[kind] || KIND_META.cd
 
@@ -131,7 +139,7 @@ export default function ScrobbleToast({ kind = 'cd', color, count = 0, partial, 
             className="absolute inset-0 rounded-full scrobble-glow"
             style={{ boxShadow: `0 0 24px 5px ${meta.glow}` }}
           />
-          <Disc kind={kind} color={color} />
+          <Disc kind={kind} color={color} translucent={translucent} />
           {/* success check badge */}
           <div className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-[#121216] scrobble-check-pop">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">

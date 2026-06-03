@@ -66,15 +66,19 @@ function detectFormatInfo(formats = []) {
   else if (names.some((n) => n.includes('cd'))) kind = 'cd'
 
   let color = null
+  let translucent = false
   if (kind === 'vinyl') {
     const text = extra.join(' ')
-    // Prefer multi-word matches first (e.g. "light blue" before "blue").
-    const found = Object.keys(VINYL_COLORS)
-      .sort((a, b) => b.length - a.length)
-      .find((c) => text.includes(c))
+    translucent = /transparent|translucent|\bclear\b/.test(text)
+    // The actual hue — ignore the transparency markers (e.g. "Green Transparent"
+    // should resolve to green, not to "clear"). Prefer multi-word matches first
+    // (e.g. "light blue" before "blue").
+    const hueKeys = Object.keys(VINYL_COLORS).filter((c) => c !== 'clear' && c !== 'transparent')
+    const found = hueKeys.sort((a, b) => b.length - a.length).find((c) => text.includes(c))
     if (found) color = VINYL_COLORS[found]
+    else if (translucent) color = '#cfe8ff' // clear vinyl with no stated hue
   }
-  return { kind, color }
+  return { kind, color, translucent }
 }
 
 export default function AlbumDetail() {
@@ -469,6 +473,7 @@ export default function AlbumDetail() {
         id: Date.now(),
         kind: formatInfo.kind,
         color: formatInfo.color,
+        translucent: formatInfo.translucent,
         count: scrobbleState.total,
         partial: scrobbleState.status === 'partial',
       })
@@ -723,6 +728,7 @@ export default function AlbumDetail() {
           key={toast.id}
           kind={toast.kind}
           color={toast.color}
+          translucent={toast.translucent}
           count={toast.count}
           partial={toast.partial}
           onDone={() => setToast(null)}
