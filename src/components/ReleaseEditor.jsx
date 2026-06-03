@@ -1,32 +1,20 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 // Per-release editor: rename tracks, headings and discs, and toggle joining a
-// disc's headings with " | ". Fields are PRE-FILLED with the current value (edit,
-// don't create). Headings and disc names are visually distinct from tracks.
+// disc's headings with " | ". Fields are PRE-FILLED with the current value.
+//
+// Performance: inputs are UNCONTROLLED (refs, no per-keystroke state) so typing
+// never re-renders the (possibly long) list. Values are read only on Save.
 const keyOf = (t) => t.position || t.title
 
 export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits, onSave, onCancel }) {
-  const [titles, setTitles] = useState({ ...(initialEdits.titles || {}) })
-  const [discs, setDiscs] = useState({ ...(initialEdits.discs || {}) })
   const [joinHeadings, setJoinHeadings] = useState(!!initialEdits.joinHeadings)
+  const refs = useRef({}) // id -> input element
+  const meta = useRef([]) // [{ id, kind, key, original }]
+  meta.current = []
 
-  // Store an override only when it actually differs from the original value.
-  const setTitle = (key, original, value) => {
-    setTitles((prev) => {
-      const next = { ...prev }
-      if (!value.trim() || value === original) delete next[key]
-      else next[key] = value
-      return next
-    })
-  }
-  const setDisc = (disc, original, value) => {
-    setDiscs((prev) => {
-      const next = { ...prev }
-      if (!value.trim() || value === original) delete next[disc]
-      else next[disc] = value
-      return next
-    })
-  }
+  const initTitles = initialEdits.titles || {}
+  const initDiscs = initialEdits.discs || {}
 
   const baseInput =
     'w-full bg-background rounded-md px-2.5 py-1.5 text-sm font-sans text-white focus:outline-none transition-colors'
@@ -34,13 +22,36 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
   const discKeys = Object.keys(baseDiscGroups).sort((a, b) => Number(a) - Number(b))
   const multiDisc = discKeys.length > 1
 
+  function register(id, kind, key, original) {
+    meta.current.push({ id, kind, key, original })
+    return (el) => {
+      if (el) refs.current[id] = el
+      else delete refs.current[id]
+    }
+  }
+
+  function handleSave() {
+    const titles = {}
+    const discs = {}
+    for (const f of meta.current) {
+      const el = refs.current[f.id]
+      if (!el) continue
+      const v = el.value
+      if (!v.trim() || v === f.original) continue
+      if (f.kind === 'title') titles[f.key] = v
+      else discs[f.key] = v
+    }
+    onSave({ titles, discs, joinHeadings })
+  }
+
   // A single editable row: heading (accent) or track (with position).
   function row(t, indent) {
     const k = keyOf(t)
+    const id = 'title:' + k + (indent ? ':s' : '')
     const isHeading = t._isIndex || t._isHeading
-    const current = titles[k] ?? t.title
+    const current = initTitles[k] ?? t.title
     return (
-      <div key={k + (indent ? '-s' : '')} className={`flex items-center gap-2 ${indent ? 'ml-5' : ''}`}>
+      <div key={id} className={`flex items-center gap-2 ${indent ? 'ml-5' : ''}`}>
         {isHeading ? (
           <span className="text-[10px] uppercase tracking-wider text-accent font-sans w-12 shrink-0 leading-none">
             Encab.
@@ -51,13 +62,13 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
           </span>
         )}
         <input
+          ref={register(id, 'title', k, t.title)}
           className={`${baseInput} ${
             isHeading
               ? 'border border-accent/50 text-accent font-medium focus:border-accent'
               : 'border border-border focus:border-accent/60'
           }`}
           defaultValue={current}
-          onChange={(e) => setTitle(k, t.title, e.target.value)}
         />
       </div>
     )
@@ -67,7 +78,7 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-serif text-lg text-white">Editar release</h3>
-        <span className="text-xs text-text-secondary font-sans">los cambios afectan a la lista y al scrobble</span>
+        <span className="text-xs text-text-secondary font-sans">afecta a la lista y al scrobble</span>
       </div>
 
       {/* Join headings toggle */}
@@ -92,10 +103,10 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
                   Nombre del disco {dk}
                 </label>
                 <input
+                  ref={register('disc:' + dk, 'disc', dk, discLabel)}
                   className={`${baseInput} border border-accent/40 font-medium focus:border-accent`}
-                  defaultValue={discs[dk] ?? discLabel}
+                  defaultValue={initDiscs[dk] ?? discLabel}
                   placeholder={discLabel || `Disco ${dk}`}
-                  onChange={(e) => setDisc(dk, discLabel, e.target.value)}
                 />
               </div>
             )}
@@ -119,7 +130,7 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
 
       <div className="flex items-center gap-2 pb-6">
         <button
-          onClick={() => onSave({ titles, discs, joinHeadings })}
+          onClick={handleSave}
           className="flex-1 py-2.5 rounded-lg bg-accent text-black font-sans font-medium text-sm hover:brightness-110 transition-all"
         >
           Guardar
