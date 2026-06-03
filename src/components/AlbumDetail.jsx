@@ -384,7 +384,7 @@ export default function AlbumDetail() {
   if (!selectedAlbum) return null
 
   return (
-    <div className="relative md:min-h-full">
+    <div className="relative min-h-full overflow-hidden">
       {/* Dynamic blurred art background */}
       {artUrl && (
         <div
@@ -524,7 +524,7 @@ export default function AlbumDetail() {
 
         {/* Tracklist */}
         {!editing && !selectedAlbum._loading && currentDisc.length > 0 && (
-          <div className="bg-card/60 backdrop-blur-sm rounded-xl p-4 border border-border/50">
+          <div className="bg-card/60 md:bg-card/90 backdrop-blur-sm md:backdrop-blur-none rounded-xl p-4 border border-border/50">
             <TrackList
               tracks={currentDisc}
               checkedTracks={checkedTracks}
