@@ -283,7 +283,15 @@ export default function AlbumDetail() {
       // If it's followed by a track and another heading appears later, that later
       // heading starts content OUTSIDE it — so the heading is just a section
       // (e.g. "The Dark Side Of The Moon" on Pulse disc 2, "2112" on a Rush side).
-      const leadWrapsDisc = firstIsHeading && (headings.length === 1 || isHead(tracks[1]))
+      //
+      // Exception: when the only OTHER heading(s) are "Bonus track(s)", the disc
+      // is still the first heading's album (most tracks under it) with a few
+      // bonus cuts appended — so keep naming it after the first heading.
+      const isBonusHeading = (t) => /^bonus(\s+tracks?)?\b/i.test((t.title || '').trim())
+      const otherHeadings = headings.filter((h) => h !== tracks[0])
+      const onlyBonusOthers = otherHeadings.length > 0 && otherHeadings.every(isBonusHeading)
+      const leadWrapsDisc =
+        firstIsHeading && (headings.length === 1 || isHead(tracks[1]) || onlyBonusOthers)
       const leadHeading = leadWrapsDisc && !sideLetterPos ? tracks[0] : null
       const fmt = discLabels[disc]
       const label = leadHeading ? leadHeading.title : fmt
