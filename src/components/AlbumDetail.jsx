@@ -542,8 +542,7 @@ export default function AlbumDetail() {
           <div className="relative shrink-0">
             {artUrl && (
               <div
-                aria-hidden
-                className="absolute top-1/2 left-0 pointer-events-none"
+                className={`absolute top-1/2 left-0 ${coverEgg ? 'pointer-events-auto' : 'pointer-events-none'} md:pointer-events-none`}
                 style={{
                   zIndex: 0,
                   opacity: coverEgg ? 1 : 0,
@@ -551,7 +550,23 @@ export default function AlbumDetail() {
                   transition: 'transform 600ms cubic-bezier(0.16,1,0.3,1), opacity 350ms ease',
                 }}
               >
-                <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} size={104} />
+                {/* On mobile the spinning disc itself is the "scrobble album" button.
+                    On desktop it's purely decorative (clicks pass through). */}
+                <button
+                  type="button"
+                  onClick={handleScrobbleAll}
+                  disabled={scrobbleState.status === 'loading'}
+                  title="Scrobble álbum"
+                  aria-label="Scrobble álbum"
+                  className="relative block rounded-full cursor-pointer active:scale-95 transition-transform disabled:opacity-60 md:pointer-events-none md:cursor-default"
+                >
+                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} size={104} />
+                  {/* mobile-only pulsing glow → hints the disc is tappable */}
+                  <span
+                    className="md:hidden absolute inset-0 rounded-full scrobble-glow pointer-events-none"
+                    style={{ boxShadow: '0 0 20px 3px rgba(245,166,35,0.5)' }}
+                  />
+                </button>
               </div>
             )}
             {isVideoFormat && artUrl ? (
@@ -579,11 +594,9 @@ export default function AlbumDetail() {
           </div>
 
           <div
-            className="relative z-20 flex-1 min-w-0 pt-1"
-            style={{
-              marginLeft: coverEgg ? 54 : 0,
-              transition: 'margin-left 600ms cubic-bezier(0.16,1,0.3,1)',
-            }}
+            className={`relative z-20 flex-1 min-w-0 pt-1 transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              coverEgg ? 'translate-x-[52px]' : 'translate-x-0'
+            }`}
           >
             <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">
               {selectedAlbum.title}
@@ -607,7 +620,9 @@ export default function AlbumDetail() {
               onClick={handleScrobbleAll}
               disabled={scrobbleState.status === 'loading'}
               title={`Scrobble all ${allTracksForScrobble.length} tracks`}
-              className="shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all group"
+              className={`shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all group ${
+                coverEgg ? 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto' : ''
+              }`}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 className="text-text-secondary group-hover:text-accent transition-colors">
