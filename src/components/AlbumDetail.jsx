@@ -153,6 +153,13 @@ export default function AlbumDetail() {
     const result = {}
     for (const [key, tracks] of Object.entries(discGroups)) {
       const disc = Number(key)
+      // A disc that is a single top-level suite/section (an index/heading, even
+      // with sub-tracks) takes that section's title — e.g. "Misplaced Childhood
+      // Parts 1 & 2".
+      if (tracks.length === 1 && (tracks[0]._isIndex || tracks[0]._isHeading) && tracks[0].title) {
+        result[disc] = tracks[0].title
+        continue
+      }
       const headings = tracks.filter(
         (t) => (t._isIndex || t._isHeading) && !t._hasSubTracks
       )
