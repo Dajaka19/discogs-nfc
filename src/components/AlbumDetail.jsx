@@ -332,6 +332,13 @@ export default function AlbumDetail() {
       ? `Scrobble ${checkedTracks.size} pista${checkedTracks.size !== 1 ? 's' : ''}`
       : `Scrobble ${selectedDisc === 0 ? 'álbum' : 'disco'}`
 
+  // Clear the selection once a scrobble completes (success or partial).
+  useEffect(() => {
+    if (scrobbleState.status === 'success' || scrobbleState.status === 'partial') {
+      setCheckedTracks(new Set())
+    }
+  }, [scrobbleState.status])
+
   if (!selectedAlbum) return null
 
   return (
@@ -518,6 +525,22 @@ export default function AlbumDetail() {
               <path d="M7 17L17 7M17 7H9M17 7v8" />
             </svg>
           </a>
+        )}
+
+        {/* Convenience scrobble at the end — only for long tracklists (>23) */}
+        {!selectedAlbum._loading && allSelectableKeys.length > 23 && (
+          <button
+            onClick={handleScrobble}
+            disabled={scrobbleState.status === 'loading'}
+            className="flex items-center justify-center gap-2 w-full py-3 mb-6 rounded-xl bg-accent text-black font-sans font-medium text-sm hover:brightness-110 active:scale-[0.99] disabled:opacity-50 transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+            {scrobbleLabel}
+          </button>
         )}
       </div>
     </div>
