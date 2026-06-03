@@ -98,6 +98,30 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
         </span>
       </button>
 
+      {/* Quick toggle: mark ALL discs to use their name as the album (box sets) */}
+      {multiDisc && (() => {
+        const allOn = discKeys.length > 0 && discKeys.every((dk) => discAsAlbum[dk])
+        return (
+          <button
+            onClick={() =>
+              setDiscAsAlbum(() => {
+                const next = {}
+                if (!allOn) discKeys.forEach((dk) => (next[dk] = true))
+                return next
+              })
+            }
+            className="w-full flex items-center justify-between gap-3 text-left bg-card/60 border border-border rounded-xl px-3 py-2.5"
+          >
+            <span className="text-sm font-sans text-text-secondary">
+              Usar el nombre de <span className="text-white">todos los discos</span> como álbum
+            </span>
+            <span className={`shrink-0 w-10 h-6 rounded-full p-0.5 transition-colors ${allOn ? 'bg-accent' : 'bg-border'}`}>
+              <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${allOn ? 'translate-x-4' : ''}`} />
+            </span>
+          </button>
+        )
+      })()}
+
       {discKeys.map((dk) => {
         const discLabel = discLabels[dk] || ''
         return (
