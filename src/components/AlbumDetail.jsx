@@ -38,7 +38,7 @@ import DiscSelector from './DiscSelector'
 import ScrobbleButton from './ScrobbleButton'
 import NfcButton from './NfcButton'
 import ReleaseEditor from './ReleaseEditor'
-import ScrobbleToast from './ScrobbleToast'
+import ScrobbleToast, { Disc } from './ScrobbleToast'
 
 // Discogs vinyl "colour" words (in format.text / descriptions) → a display hex.
 const VINYL_COLORS = {
@@ -89,6 +89,7 @@ export default function AlbumDetail() {
   const [editing, setEditing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState(null) // scrobble-success popup
+  const [coverEgg, setCoverEgg] = useState(false) // disc-behind-cover easter egg
   const { scrobbleState, scrobble, reset } = useLastfm()
   const { refreshRelease } = useDiscogs()
 
@@ -117,6 +118,7 @@ export default function AlbumDetail() {
     setSelectedDisc(0)
     setResolvedDurations({})
     setEditing(false)
+    setCoverEgg(false)
     reset()
   }, [selectedAlbum?.id])
 
@@ -536,24 +538,45 @@ export default function AlbumDetail() {
 
         {/* Album header */}
         <div className="flex gap-4 items-start">
-          {isVideoFormat && artUrl ? (
-            // DVD / Blu-ray: keep aspect ratio (no square crop)
-            <img
-              src={artUrl}
-              alt={selectedAlbum.title}
-              className="shrink-0 w-28 h-auto rounded-xl object-contain shadow-2xl"
-            />
-          ) : (
-            <div className="shrink-0 w-28 h-28 rounded-xl overflow-hidden shadow-2xl bg-border">
-              {artUrl ? (
-                <img src={artUrl} alt={selectedAlbum.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-3xl text-text-secondary opacity-30">◉</span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Cover (+ easter egg: tap to slide the format's disc out from behind) */}
+          <div className="relative z-10 shrink-0">
+            {artUrl && (
+              <div
+                aria-hidden
+                className="absolute top-1/2 left-0 pointer-events-none"
+                style={{
+                  zIndex: 0,
+                  opacity: coverEgg ? 1 : 0,
+                  transform: `translateY(-50%) translateX(${coverEgg ? 66 : 6}px)`,
+                  transition: 'transform 600ms cubic-bezier(0.16,1,0.3,1), opacity 350ms ease',
+                }}
+              >
+                <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} size={104} />
+              </div>
+            )}
+            {isVideoFormat && artUrl ? (
+              // DVD / Blu-ray: keep aspect ratio (no square crop)
+              <img
+                src={artUrl}
+                alt={selectedAlbum.title}
+                onClick={() => setCoverEgg((v) => !v)}
+                className="relative z-10 w-28 h-auto rounded-xl object-contain shadow-2xl cursor-pointer select-none active:scale-[0.99] transition-transform"
+              />
+            ) : (
+              <div
+                onClick={() => setCoverEgg((v) => !v)}
+                className="relative z-10 w-28 h-28 rounded-xl overflow-hidden shadow-2xl bg-border cursor-pointer select-none active:scale-[0.99] transition-transform"
+              >
+                {artUrl ? (
+                  <img src={artUrl} alt={selectedAlbum.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-3xl text-text-secondary opacity-30">◉</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0 pt-1">
             <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">

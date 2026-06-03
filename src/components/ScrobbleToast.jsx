@@ -23,16 +23,20 @@ const OPTICAL_GRADIENT = {
   sacd: 'conic-gradient(from 0deg, #8a6a16, #e8c34a, #fff0b0, #d4af37, #a37b1e, #e8c34a, #8a6a16)',
 }
 
-function Disc({ kind, color, translucent }) {
+// A spinning disc whose look depends on the release format. Size-aware so it can
+// be reused both in the scrobble toast (small) and the cover easter egg (large).
+export function Disc({ kind, color, translucent, size = 84 }) {
+  const hub = Math.round(size * 0.38)
   if (kind === 'vinyl') {
     const body = color || '#15151a'
+    const spindle = Math.max(4, Math.round(size * 0.06))
     // Translucent / transparent vinyl reads like stained glass: lighter, glassier
     // grooves and a uniform brightening of the hue.
     const grooves = translucent
       ? 'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px, rgba(255,255,255,0.12) 1.6px, rgba(255,255,255,0.12) 2px)'
       : 'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, rgba(255,255,255,0.05) 1.6px, rgba(255,255,255,0.05) 2px)'
     return (
-      <div className="relative w-[84px] h-[84px]">
+      <div className="relative" style={{ width: size, height: size }}>
         <div
           className="absolute inset-0 rounded-full scrobble-disc-spin overflow-hidden"
           style={{
@@ -56,13 +60,15 @@ function Disc({ kind, color, translucent }) {
         >
           {/* centre label + spindle hole */}
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[32px] h-[32px] rounded-full flex items-center justify-center"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center"
             style={{
+              width: hub,
+              height: hub,
               background: color ? '#0e0e12' : '#f5a623',
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
             }}
           >
-            <div className="w-[5px] h-[5px] rounded-full bg-black/85" />
+            <div className="rounded-full bg-black/85" style={{ width: spindle, height: spindle }} />
           </div>
         </div>
         {/* fixed specular sweep — light reflecting off the surface */}
@@ -78,8 +84,9 @@ function Disc({ kind, color, translucent }) {
   }
 
   // optical disc
+  const innerHole = Math.max(11, Math.round(size * 0.155))
   return (
-    <div className="relative w-[84px] h-[84px]">
+    <div className="relative" style={{ width: size, height: size }}>
       <div
         className="absolute inset-0 rounded-full scrobble-disc-spin"
         style={{
@@ -89,12 +96,12 @@ function Disc({ kind, color, translucent }) {
       >
         {/* clear hub + spindle */}
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[32px] h-[32px] rounded-full bg-[#0d0d12] flex items-center justify-center"
-          style={{ boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.28)' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0d0d12] flex items-center justify-center"
+          style={{ width: hub, height: hub, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.28)' }}
         >
           <div
-            className="w-[13px] h-[13px] rounded-full bg-[#1a1a22]"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' }}
+            className="rounded-full bg-[#1a1a22]"
+            style={{ width: innerHole, height: innerHole, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' }}
           />
         </div>
       </div>
