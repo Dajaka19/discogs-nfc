@@ -171,6 +171,10 @@ export default function AlbumDetail() {
 
   const artUrl = selectedAlbum?.images?.[0]?.uri || selectedAlbum?.images?.[0]?.resource_url
 
+  // DVD / Blu-ray covers aren't square (they're the case art) — keep their aspect
+  // ratio instead of cropping to a square.
+  const isVideoFormat = (selectedAlbum?.formats || []).some((f) => /dvd|blu[- ]?ray/i.test(f.name || ''))
+
   const label = selectedAlbum?.labels?.[0]?.name
   const country = selectedAlbum?.country
   const format = selectedAlbum?.formats?.[0]
@@ -353,15 +357,24 @@ export default function AlbumDetail() {
 
         {/* Album header */}
         <div className="flex gap-4 items-start">
-          <div className="shrink-0 w-28 h-28 rounded-xl overflow-hidden shadow-2xl bg-border">
-            {artUrl ? (
-              <img src={artUrl} alt={selectedAlbum.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-3xl text-text-secondary opacity-30">◉</span>
-              </div>
-            )}
-          </div>
+          {isVideoFormat && artUrl ? (
+            // DVD / Blu-ray: keep aspect ratio (no square crop)
+            <img
+              src={artUrl}
+              alt={selectedAlbum.title}
+              className="shrink-0 h-28 w-auto max-w-[10rem] rounded-xl object-contain shadow-2xl"
+            />
+          ) : (
+            <div className="shrink-0 w-28 h-28 rounded-xl overflow-hidden shadow-2xl bg-border">
+              {artUrl ? (
+                <img src={artUrl} alt={selectedAlbum.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-3xl text-text-secondary opacity-30">◉</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex-1 min-w-0 pt-1">
             <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">
