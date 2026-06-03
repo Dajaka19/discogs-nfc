@@ -1,12 +1,12 @@
+import { memo } from 'react'
 import { formatDuration, trackArtistString } from '../utils/tracklist'
 import RoundCheckbox from './RoundCheckbox'
-import { useApp } from '../context/AppContext'
 
 // A single track row with checkbox, position, title, duration.
 // Used for both normal tracks and sub-tracks (isSubTrack adds indent).
-export default function TrackItem({ track, checked, indeterminate, onToggle, isSubTrack }) {
-  const { selectedAlbum } = useApp()
-  const albumArtist = trackArtistString(selectedAlbum?.artists)
+// Memoized + decoupled from context so a long tracklist only re-renders the rows
+// whose props actually change (e.g. a single checkbox toggle).
+function TrackItem({ track, checked, indeterminate, onToggle, isSubTrack, albumArtist }) {
   const trackArtist = trackArtistString(track.artists)
   // Only show the per-track artist when it differs from the album artist
   // (so duets/guests stand out, without repeating the main artist on every row).
@@ -70,3 +70,5 @@ export default function TrackItem({ track, checked, indeterminate, onToggle, isS
     </div>
   )
 }
+
+export default memo(TrackItem)

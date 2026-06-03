@@ -208,6 +208,9 @@ export default function AlbumDetail() {
   const artist = selectedAlbum?.artists
     ?.map((a) => a.name?.replace(/ \(\d+\)$/, ''))
     .join(', ') || ''
+  // Album artist in the same format as per-track artists, to hide redundant
+  // per-track credits in TrackItem.
+  const albumArtistStr = trackArtistString(selectedAlbum?.artists)
 
   const artUrl = selectedAlbum?.images?.[0]?.uri || selectedAlbum?.images?.[0]?.resource_url
 
@@ -532,6 +535,7 @@ export default function AlbumDetail() {
               onScrobble={handleScrobble}
               scrobbleLabel={scrobbleLabel}
               scrobbling={scrobbleState.status === 'loading'}
+              albumArtist={albumArtistStr}
             />
           </div>
         )}

@@ -13,7 +13,7 @@ function collectSelectables(sectionTracks) {
   return result
 }
 
-export default function TrackList({ tracks, checkedTracks, onToggle, onGroupToggle, onSelectAll, onDeselectAll, onScrobble, scrobbleLabel, scrobbling }) {
+export default function TrackList({ tracks, checkedTracks, onToggle, onGroupToggle, onSelectAll, onDeselectAll, onScrobble, scrobbleLabel, scrobbling, albumArtist }) {
   // Selectable leaf keys across this disc — for the compact "select all" toggle.
   const selectableKeys = useMemo(() => {
     const keys = []
@@ -168,7 +168,8 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
                           track={sub}
                           checked={checkedTracks.has(sub.position || sub.title)}
                           isSubTrack
-                          onToggle={() => onToggle(sub)}
+                          onToggle={onToggle}
+                          albumArtist={albumArtist}
                         />
                       ))}
                     </div>
@@ -190,6 +191,7 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
                       checked={subAllChecked}
                       indeterminate={subSomeChecked && !subAllChecked}
                       onToggle={() => onGroupToggle(track._subTracks)}
+                      albumArtist={albumArtist}
                     />
                     <div className="subtrack-connector ml-4 mt-0.5 space-y-0.5 pb-1">
                       {track._subTracks.map((sub, si2) => (
@@ -198,7 +200,8 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
                           track={sub}
                           checked={checkedTracks.has(sub.position || sub.title)}
                           isSubTrack
-                          onToggle={() => onToggle(sub)}
+                          onToggle={onToggle}
+                          albumArtist={albumArtist}
                         />
                       ))}
                     </div>
@@ -213,7 +216,8 @@ export default function TrackList({ tracks, checkedTracks, onToggle, onGroupTogg
                   key={ti}
                   track={track}
                   checked={checkedTracks.has(trackId)}
-                  onToggle={() => onToggle(track)}
+                  onToggle={onToggle}
+                  albumArtist={albumArtist}
                 />
               )
             })}
