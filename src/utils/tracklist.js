@@ -15,13 +15,16 @@ export function parseDuration(str) {
 export function trackArtistString(artists) {
   if (!Array.isArray(artists) || artists.length === 0) return ''
   let out = ''
-  for (const a of artists) {
+  artists.forEach((a, i) => {
     out += (a.name || '').replace(/ \(\d+\)$/, '')
-    if (a.join) {
-      const j = a.join.trim()
-      out += j === ',' ? ', ' : ` ${j} `
+    if (i < artists.length - 1) {
+      // Normalize Discogs join separators to a clean Last.fm-friendly credit.
+      const j = (a.join || '').trim()
+      if (j === ',') out += ', '
+      else if (/^feat\.?$|^featuring$/i.test(j)) out += ' feat. '
+      else out += ' & ' // "&", verbose phrases ("Vocal Duet With", "With"…) or none
     }
-  }
+  })
   return out.trim()
 }
 

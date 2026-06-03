@@ -1,10 +1,16 @@
 import { formatDuration, trackArtistString } from '../utils/tracklist'
 import RoundCheckbox from './RoundCheckbox'
+import { useApp } from '../context/AppContext'
 
 // A single track row with checkbox, position, title, duration.
 // Used for both normal tracks and sub-tracks (isSubTrack adds indent).
 export default function TrackItem({ track, checked, indeterminate, onToggle, isSubTrack }) {
-  const artistStr = trackArtistString(track.artists)
+  const { selectedAlbum } = useApp()
+  const albumArtist = trackArtistString(selectedAlbum?.artists)
+  const trackArtist = trackArtistString(track.artists)
+  // Only show the per-track artist when it differs from the album artist
+  // (so duets/guests stand out, without repeating the main artist on every row).
+  const artistStr = trackArtist && trackArtist !== albumArtist ? trackArtist : ''
   // Show a time only when it's actually known (Discogs or a MusicBrainz lookup).
   // Unknown duration (_durationSecs == null) → render nothing.
   const duration = track._totalDuration
