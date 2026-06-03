@@ -539,7 +539,7 @@ export default function AlbumDetail() {
         {/* Album header */}
         <div className="flex gap-4 items-start">
           {/* Cover (+ easter egg: tap to slide the format's disc out from behind) */}
-          <div className="relative z-10 shrink-0">
+          <div className="relative shrink-0">
             {artUrl && (
               <div
                 aria-hidden
@@ -578,7 +578,7 @@ export default function AlbumDetail() {
             )}
           </div>
 
-          <div className="flex-1 min-w-0 pt-1">
+          <div className="relative z-20 flex-1 min-w-0 pt-1">
             <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">
               {selectedAlbum.title}
             </h2>
