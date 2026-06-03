@@ -40,6 +40,9 @@ function Disc({ kind, color, translucent }) {
             backgroundImage: [
               // brighten the hue uniformly so it looks "see-through"
               ...(translucent ? ['linear-gradient(rgba(255,255,255,0.22), rgba(255,255,255,0.22))'] : []),
+              // rotating light wedges — make the spin visible (grooves alone are
+              // radially symmetric, so rotation wouldn't show otherwise)
+              'conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.16) 0deg, transparent 28deg, transparent 175deg, rgba(255,255,255,0.09) 200deg, transparent 250deg, transparent 360deg)',
               grooves,
               // subtle reflective play-area band
               'radial-gradient(circle at 50% 50%, transparent 38%, rgba(255,255,255,0.07) 46%, transparent 60%)',
