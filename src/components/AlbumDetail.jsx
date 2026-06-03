@@ -257,42 +257,29 @@ export default function AlbumDetail() {
         result[disc] = headings.map((h) => h.title).join(' | ')
         continue
       }
-      // A heading only NAMES the disc when the whole disc sits under it — i.e.
-      // the disc STARTS with that heading and everything below it belongs to it
-      // (e.g. each CD of a box set is "<album>" then its tracks). A heading that
-      // appears partway through is a song suite/section, not the disc's name
-      // (e.g. "2112" on side B of a Rush LP).
+      // A heading NAMES the disc only when the whole disc sits under it — i.e.
+      // the disc STARTS with that heading (everything below belongs to it, e.g.
+      // each disc of a box set is "<album>" then its tracks). A disc that starts
+      // with a track has no name; the heading is then a mid-disc section.
       //
-      // The reliable signal: numeric "disc-track" positions ("1-1", "4-1") mean
-      // the leading heading is the disc's album; side-letter positions ("A1",
-      // "C1-I") mean the headings are content sections within the side, so they
-      // never name the disc.
+      // Named section headings that follow (song suites like "By-Tor", "Act II",
+      // or "Bonus Tracks") are considered part of that album, so they don't block
+      // naming. But an ANONYMOUS separator heading ("-", "—", blank) marks a break
+      // to content OUTSIDE the lead heading — e.g. the encores after "The Dark
+      // Side Of The Moon" on Pulse, or after the suites on Rush's live LP — so it
+      // disqualifies the lead from naming the disc.
+      // (Suites with their own sub-tracks already aren't counted as headings, so
+      // a disc like Rush "Archives" — "Fly By Night" + the By-Tor suite — is
+      // correctly named after its leading album heading.)
       const isHead = (t) => t && (t._isIndex || t._isHeading) && !t._hasSubTracks
       const firstIsHeading = isHead(tracks[0])
-      const firstLeaf = tracks.find((t) => !(t._isIndex || t._isHeading) || t._hasSubTracks)
-      const firstLeafPos = firstLeaf?._hasSubTracks
-        ? firstLeaf._subTracks?.[0]?.position
-        : firstLeaf?.position
-      // A vinyl SIDE position is a single letter + digit ("A1", "C1-I"); there the
-      // headings are song suites within the side, never the disc's name. Prefix
-      // ("CD-1", "DVD-1") and numeric ("1-1") positions are real discs/sections.
-      const sideLetterPos = /^[A-Z]\d/.test(firstLeafPos || '')
-      // The leading heading wraps the WHOLE disc only when it's the disc's sole
-      // heading, OR it is immediately followed by a sub-heading (an album title
-      // over "Act"/"Part" sections, e.g. Dream Theater's "Metropolis Pt 2").
-      // If it's followed by a track and another heading appears later, that later
-      // heading starts content OUTSIDE it — so the heading is just a section
-      // (e.g. "The Dark Side Of The Moon" on Pulse disc 2, "2112" on a Rush side).
-      //
-      // Exception: when the only OTHER heading(s) are "Bonus track(s)", the disc
-      // is still the first heading's album (most tracks under it) with a few
-      // bonus cuts appended — so keep naming it after the first heading.
-      const isBonusHeading = (t) => /^bonus(\s+tracks?)?\b/i.test((t.title || '').trim())
+      const isSeparatorHeading = (t) => {
+        const title = (t.title || '').trim()
+        return title === '' || /^[-–—_.·•*~]+$/.test(title)
+      }
       const otherHeadings = headings.filter((h) => h !== tracks[0])
-      const onlyBonusOthers = otherHeadings.length > 0 && otherHeadings.every(isBonusHeading)
-      const leadWrapsDisc =
-        firstIsHeading && (headings.length === 1 || isHead(tracks[1]) || onlyBonusOthers)
-      const leadHeading = leadWrapsDisc && !sideLetterPos ? tracks[0] : null
+      const leadWrapsDisc = firstIsHeading && !otherHeadings.some(isSeparatorHeading)
+      const leadHeading = leadWrapsDisc ? tracks[0] : null
       const fmt = discLabels[disc]
       const label = leadHeading ? leadHeading.title : fmt
       if (label) result[disc] = label
