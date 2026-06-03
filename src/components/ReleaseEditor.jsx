@@ -9,6 +9,9 @@ const keyOf = (t) => t.position || t.title
 
 export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits, onSave, onCancel }) {
   const [joinHeadings, setJoinHeadings] = useState(!!initialEdits.joinHeadings)
+  // Per-disc "use the disc name as the album" (for box sets where each disc is
+  // a different album). Keyed by disc number.
+  const [discAsAlbum, setDiscAsAlbum] = useState(() => ({ ...(initialEdits.discAsAlbum || {}) }))
   const refs = useRef({}) // id -> input element
   const meta = useRef([]) // [{ id, kind, key, original }]
   meta.current = []
@@ -41,7 +44,10 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
       if (f.kind === 'title') titles[f.key] = v
       else discs[f.key] = v
     }
-    onSave({ titles, discs, joinHeadings })
+    // Keep only the discs actually marked as "use as album".
+    const discAsAlbumClean = {}
+    for (const [dk, on] of Object.entries(discAsAlbum)) if (on) discAsAlbumClean[dk] = true
+    onSave({ titles, discs, joinHeadings, discAsAlbum: discAsAlbumClean })
   }
 
   // A single editable row: heading (accent) or track (with position).
@@ -108,6 +114,19 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
                   defaultValue={initDiscs[dk] ?? discLabel}
                   placeholder={discLabel || `Disco ${dk}`}
                 />
+                {/* Use this disc's name as the scrobble album (box sets) */}
+                <button
+                  type="button"
+                  onClick={() => setDiscAsAlbum((m) => ({ ...m, [dk]: !m[dk] }))}
+                  className="mt-2 w-full flex items-center justify-between gap-3 text-left"
+                >
+                  <span className="text-xs font-sans text-text-secondary">
+                    Usar el nombre del disco como nombre del álbum
+                  </span>
+                  <span className={`shrink-0 w-9 h-5 rounded-full p-0.5 transition-colors ${discAsAlbum[dk] ? 'bg-accent' : 'bg-border'}`}>
+                    <span className={`block w-4 h-4 rounded-full bg-white transition-transform ${discAsAlbum[dk] ? 'translate-x-4' : ''}`} />
+                  </span>
+                </button>
               </div>
             )}
 

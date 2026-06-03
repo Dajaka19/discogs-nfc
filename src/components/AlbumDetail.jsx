@@ -337,32 +337,58 @@ export default function AlbumDetail() {
 
   const albumTitleClean = cleanScrobbleTitle(selectedAlbum?.title)
 
-  // Tracks of the current view (a disc tab, or all discs) — the default scrobble.
-  const currentDiscForScrobble = useMemo(
-    () => buildScrobbleList(currentDisc, artist, albumTitleClean),
-    [currentDisc, artist, albumTitleClean]
+  // Per-disc scrobble album. In a box set ("Original Album Series", …) each disc
+  // is a different album; the editor can mark a disc so its own name is used as
+  // the album when scrobbling its tracks, instead of the box-set title.
+  const albumByDisc = useMemo(() => {
+    const m = {}
+    for (const key of Object.keys(discGroups)) {
+      const disc = Number(key)
+      const useDiscName = releaseEdits.discAsAlbum?.[disc] && mergedDiscLabels[disc]
+      m[disc] = useDiscName ? cleanScrobbleTitle(mergedDiscLabels[disc]) : albumTitleClean
+    }
+    return m
+  }, [discGroups, releaseEdits, mergedDiscLabels, albumTitleClean])
+
+  // Build a scrobble list across discs, baking the per-disc album into each track.
+  const buildDiscsScrobble = useCallback(
+    (discsObj) => {
+      const out = []
+      for (const key of Object.keys(discsObj).sort((a, b) => Number(a) - Number(b))) {
+        out.push(...buildScrobbleList(discsObj[key], artist, albumByDisc[Number(key)] ?? albumTitleClean))
+      }
+      return out
+    },
+    [artist, albumByDisc, albumTitleClean]
   )
+
+  // Tracks of the current view (a disc tab, or all discs) — the default scrobble.
+  const currentDiscForScrobble = useMemo(() => {
+    if (selectedDisc === 0) return buildDiscsScrobble(discGroups)
+    return buildScrobbleList(currentDisc, artist, albumByDisc[selectedDisc] ?? albumTitleClean)
+  }, [selectedDisc, discGroups, currentDisc, artist, albumByDisc, albumTitleClean, buildDiscsScrobble])
 
   // Checked tracks across all discs — the scrobble when something is selected.
   const selectedTracksForScrobble = useMemo(() => {
     const result = []
-    for (const disc of Object.values(discGroups)) {
+    for (const [key, disc] of Object.entries(discGroups)) {
+      const discAlbum = albumByDisc[Number(key)] ?? albumTitleClean
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
           const parentArtist = trackArtistString(track.artists)
           track._subTracks.forEach((s) => {
             if (s._isSelectable !== false && checkedTracks.has(trackKey(s))) {
               const t = cleanScrobbleTitle(s.title)
-              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: albumTitleClean })
+              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: discAlbum })
             }
           })
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
-          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: albumTitleClean })
+          result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: discAlbum })
         }
       }
     }
     return result
-  }, [checkedTracks, discGroups, artist, albumTitleClean])
+  }, [checkedTracks, discGroups, artist, albumByDisc, albumTitleClean])
 
   const handleSaveEdits = useCallback(
     (draft) => {
@@ -380,8 +406,8 @@ export default function AlbumDetail() {
 
   // Whole album (all discs) — for the header "Scrobble album" button.
   const allTracksForScrobble = useMemo(
-    () => buildScrobbleList(allDiscsTracks, artist, albumTitleClean),
-    [allDiscsTracks, artist, albumTitleClean]
+    () => buildDiscsScrobble(discGroups),
+    [discGroups, buildDiscsScrobble]
   )
   const handleScrobbleAll = useCallback(() => {
     scrobble(allTracksForScrobble, artist, albumTitleClean)
