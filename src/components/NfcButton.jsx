@@ -2,20 +2,24 @@ import { useState } from 'react'
 
 // NFC tag writing.
 //
-// Tag payload: vinylnfc://release/{id} — opens the native app at that release.
+// Tag payload: https://discogs-nfc.vercel.app/?release={id}
+//   We write a plain HTTPS URL (NOT the vinylnfc:// custom scheme). On iOS a
+//   custom-scheme tag triggers an "Open in app?" confirmation; an HTTPS URL
+//   opens straight away (in Safari / the installed PWA) with no extra prompt.
+//   The app handles ?release={id} to jump to that record.
 //
 // Android Chrome: Web NFC API writes the tag directly from the page — one tap,
 //   no app, no setup (the fastest path the platform allows).
 // iOS: the browser can't write NFC. "Copiar enlace" copies the link to write with
 //   an external NFC app (e.g. NFC Tools).
-const SCHEME_BASE = 'vinylnfc://release'
+const URL_BASE = 'https://discogs-nfc.vercel.app/?release='
 
 export default function NfcButton({ releaseId }) {
   const [status, setStatus] = useState('idle') // idle | writing | done | error | copied
   const [showHelp, setShowHelp] = useState(false)
 
   const supportsWebNfc = typeof window !== 'undefined' && 'NDEFReader' in window
-  const tagUrl = `${SCHEME_BASE}/${releaseId}`
+  const tagUrl = `${URL_BASE}${releaseId}`
 
   const handleWrite = async () => {
     if (supportsWebNfc) {
@@ -83,7 +87,7 @@ export default function NfcButton({ releaseId }) {
         </button>
       )}
 
-      {/* Copy the vinylnfc:// app link (to write with an external NFC app) */}
+      {/* Copy the HTTPS link (to write with an external NFC app) */}
       <button
         onClick={handleCopy}
         className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-text-secondary hover:text-white transition-all text-sm font-sans"
