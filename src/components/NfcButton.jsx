@@ -2,17 +2,19 @@ import { useState } from 'react'
 
 // NFC tag writing.
 //
-// Tag payload: vinylnfc://release/{id} — opens the native app at that release.
-//   (An HTTPS URL would open instantly with no prompt, but in the BROWSER, not
-//   the app. Opening the native app from NFC without iOS's "Open in app?"
-//   confirmation needs Universal Links, which require the Associated Domains
-//   entitlement — unavailable on a free Apple ID, like NFC writing.)
+// Tag payload: TWO records on one tag —
+//   1) vinylnfc://release/{id}  → iPhone reads the FIRST record and opens the app.
+//   2) https://…/?release={id}  → a USB NFC reader on a PC opens this web URL.
+//   This way the same tag opens the native app on iOS AND the web on a computer.
+//   (A single HTTPS-only tag would open the browser on iOS, not the app; opening
+//   the app with no prompt needs Universal Links = a paid Apple ID.)
 //
 // Android Chrome: Web NFC API writes the tag directly from the page — one tap,
 //   no app, no setup (the fastest path the platform allows).
 // iOS: the browser can't write NFC. "Copiar enlace" copies the link to write with
 //   an external NFC app (e.g. NFC Tools).
 const SCHEME_BASE = 'vinylnfc://release'
+const WEB_BASE = 'https://discogs-nfc.vercel.app/?release='
 
 export default function NfcButton({ releaseId }) {
   const [status, setStatus] = useState('idle') // idle | writing | done | error | copied
@@ -20,15 +22,22 @@ export default function NfcButton({ releaseId }) {
 
   const supportsWebNfc = typeof window !== 'undefined' && 'NDEFReader' in window
   const tagUrl = `${SCHEME_BASE}/${releaseId}`
+  const webUrl = `${WEB_BASE}${releaseId}`
 
   const handleWrite = async () => {
     if (supportsWebNfc) {
-      // Android Chrome — write directly from the page
+      // Android Chrome — write directly from the page. Two URL records: the app
+      // scheme first (iPhone uses it), the web URL second (PC NFC readers use it).
       try {
         setStatus('writing')
         // eslint-disable-next-line no-undef
         const ndef = new NDEFReader()
-        await ndef.write({ records: [{ recordType: 'url', data: tagUrl }] })
+        await ndef.write({
+          records: [
+            { recordType: 'url', data: tagUrl },
+            { recordType: 'url', data: webUrl },
+          ],
+        })
         setStatus('done')
         setTimeout(() => setStatus('idle'), 3000)
       } catch {
@@ -128,12 +137,14 @@ export default function NfcButton({ releaseId }) {
           <ol className="space-y-1 list-decimal list-inside">
             <li>Toca <span className="text-white">Copiar enlace</span></li>
             <li>Abre <span className="text-white">NFC Tools</span> → pestaña <span className="text-white">Escribir</span></li>
-            <li><span className="text-white">Añadir un registro</span> → <span className="text-white">URL/URI</span> → pega → OK</li>
+            <li><span className="text-white">Añadir un registro</span> → <span className="text-white">URL/URI</span> → pega el enlace <span className="text-white">vinylnfc://</span> → OK</li>
+            <li>(Opcional, para el PC) <span className="text-white">Añadir un registro</span> → <span className="text-white">URL/URI</span> → <span className="text-white break-all">{webUrl}</span></li>
             <li><span className="text-white">Escribir</span> → acerca el iPhone al tag</li>
           </ol>
           <p className="opacity-60 pt-0.5">
-            Al escanearlo abrirá esta app en el disco. (Para escribir muchos a la vez, lo más rápido es un
-            lector USB NFC en el PC con NFC Tools.)
+            El primer registro abre la app en iPhone; el segundo (https) deja que un
+            lector USB NFC en el PC abra la web del disco. Con la grabación directa
+            desde Android se escriben los dos automáticamente.
           </p>
         </div>
       )}
