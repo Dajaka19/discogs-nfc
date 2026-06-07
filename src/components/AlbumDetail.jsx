@@ -87,6 +87,40 @@ function detectFormatInfo(formats = []) {
   return { kind, color, translucent, picture }
 }
 
+// Pull a vibrant accent colour out of a (same-origin) cover image, for the vinyl
+// centre label. Returns an "rgb(...)" string, or null if nothing usable.
+function pickAccentColor(imgEl) {
+  try {
+    const W = 28
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = W
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(imgEl, 0, 0, W, W)
+    const { data } = ctx.getImageData(0, 0, W, W)
+    let best = null
+    let bestScore = -1
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
+      if (a < 200) continue
+      const max = Math.max(r, g, b)
+      const min = Math.min(r, g, b)
+      const val = max / 255
+      const sat = max === 0 ? 0 : (max - min) / max
+      // Skip near-black / near-white / washed-out pixels — keep vivid ones.
+      if (val < 0.22 || val > 0.96 || sat < 0.25) continue
+      const score = sat * 1.6 + val * 0.4
+      if (score > bestScore) {
+        bestScore = score
+        best = [r, g, b]
+      }
+    }
+    return best ? `rgb(${best[0]}, ${best[1]}, ${best[2]})` : null
+  } catch {
+    return null // tainted canvas / decode failure
+  }
+}
+
 export default function AlbumDetail() {
   const { selectedAlbum, setSelectedAlbum, prefs, edits, saveReleaseEdits } = useApp()
   const [checkedTracks, setCheckedTracks] = useState(new Set())
@@ -96,6 +130,7 @@ export default function AlbumDetail() {
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState(null) // scrobble-success popup
   const [coverEgg, setCoverEgg] = useState(false) // disc-behind-cover easter egg
+  const [coverAccent, setCoverAccent] = useState(null) // vinyl label colour from art
   const { scrobbleState, scrobble, reset } = useLastfm()
   const { refreshRelease } = useDiscogs()
 
@@ -304,6 +339,23 @@ export default function AlbumDetail() {
 
   const artUrl = selectedAlbum?.images?.[0]?.uri || selectedAlbum?.images?.[0]?.resource_url
 
+  // Derive a vinyl-label accent colour from the cover art (via the same-origin
+  // image proxy so the canvas stays readable). Falls back to the app accent.
+  useEffect(() => {
+    setCoverAccent(null)
+    if (!artUrl) return
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (!cancelled) setCoverAccent(pickAccentColor(img))
+    }
+    img.onerror = () => {}
+    img.src = `/api/img?url=${encodeURIComponent(artUrl)}`
+    return () => {
+      cancelled = true
+    }
+  }, [artUrl])
+
   // DVD / Blu-ray covers aren't square (they're the case art) — keep their aspect
   // ratio instead of cropping to a square.
   const isVideoFormat = (selectedAlbum?.formats || []).some((f) => /dvd|blu[- ]?ray/i.test(f.name || ''))
@@ -504,6 +556,7 @@ export default function AlbumDetail() {
         color: formatInfo.color,
         translucent: formatInfo.translucent,
         image: formatInfo.picture ? artUrl : undefined,
+        labelColor: coverAccent,
         count: scrobbleState.total,
         partial: scrobbleState.status === 'partial',
       })
@@ -567,7 +620,7 @@ export default function AlbumDetail() {
                   aria-label="Scrobble álbum"
                   className="relative block rounded-full cursor-pointer active:scale-95 transition-transform disabled:opacity-60 md:pointer-events-none md:cursor-default"
                 >
-                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} image={formatInfo.picture ? artUrl : undefined} size={104} />
+                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} image={formatInfo.picture ? artUrl : undefined} labelColor={coverAccent} size={104} />
                   {/* mobile-only pulsing glow → hints the disc is tappable */}
                   <span
                     className="md:hidden absolute inset-0 rounded-full scrobble-glow pointer-events-none"
@@ -804,6 +857,7 @@ export default function AlbumDetail() {
           color={toast.color}
           translucent={toast.translucent}
           image={toast.image}
+          labelColor={toast.labelColor}
           count={toast.count}
           partial={toast.partial}
           onDone={() => setToast(null)}
