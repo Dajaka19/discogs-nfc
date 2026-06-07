@@ -7,11 +7,38 @@ import { useRef, useState } from 'react'
 // never re-renders the (possibly long) list. Values are read only on Save.
 const keyOf = (t) => t.position || t.title
 
-export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits, onSave, onCancel }) {
+// Color inputs need #rrggbb. Convert "rgb(r, g, b)" (the cover accent) → hex.
+function toHex(c) {
+  if (!c) return null
+  if (c[0] === '#') return c
+  const m = c.match(/\d+/g)
+  if (!m || m.length < 3) return null
+  return '#' + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')
+}
+
+export default function ReleaseEditor({
+  baseDiscGroups,
+  discLabels,
+  initialEdits,
+  isVinyl,
+  isPicture,
+  autoColor,
+  autoLabel,
+  onSave,
+  onCancel,
+}) {
   const [joinHeadings, setJoinHeadings] = useState(!!initialEdits.joinHeadings)
   // Per-disc "use the disc name as the album" (for box sets where each disc is
   // a different album). Keyed by disc number.
   const [discAsAlbum, setDiscAsAlbum] = useState(() => ({ ...(initialEdits.discAsAlbum || {}) }))
+
+  // Vinyl appearance overrides (disc colour / label colour / picture-disc zoom).
+  const initStyle = initialEdits.discStyle || {}
+  const defDiscColor = autoColor || '#1a1a1a'
+  const defLabelColor = toHex(autoLabel) || '#f5a623'
+  const [discColor, setDiscColor] = useState(initStyle.color || defDiscColor)
+  const [labelColor, setLabelColor] = useState(initStyle.label || defLabelColor)
+  const [pictureZoom, setPictureZoom] = useState(initStyle.zoom || 1)
   const refs = useRef({}) // id -> input element
   const meta = useRef([]) // [{ id, kind, key, original }]
   meta.current = []
@@ -54,7 +81,25 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
     // Keep only the discs actually marked as "use as album".
     const discAsAlbumClean = {}
     for (const [dk, on] of Object.entries(discAsAlbum)) if (on) discAsAlbumClean[dk] = true
-    onSave({ titles, discs, joinHeadings, discAsAlbum: discAsAlbumClean })
+
+    // Vinyl style — store only what differs from the auto values.
+    const discStyle = {}
+    if (isVinyl) {
+      if (isPicture) {
+        if (Number(pictureZoom) !== 1) discStyle.zoom = Number(pictureZoom)
+      } else {
+        if (discColor.toLowerCase() !== defDiscColor.toLowerCase()) discStyle.color = discColor
+        if (labelColor.toLowerCase() !== defLabelColor.toLowerCase()) discStyle.label = labelColor
+      }
+    }
+
+    onSave({ titles, discs, joinHeadings, discAsAlbum: discAsAlbumClean, discStyle })
+  }
+
+  const resetStyle = () => {
+    setDiscColor(defDiscColor)
+    setLabelColor(defLabelColor)
+    setPictureZoom(1)
   }
 
   // A single editable row: heading (accent) or track (with position).
@@ -180,6 +225,61 @@ export default function ReleaseEditor({ baseDiscGroups, discLabels, initialEdits
           </div>
         )
       })}
+
+      {/* Vinyl appearance — colour of the disc & label, or zoom for picture discs */}
+      {isVinyl && (
+        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[10px] uppercase tracking-wider text-accent font-sans">
+              Aspecto del vinilo
+            </h4>
+            <button
+              onClick={resetStyle}
+              className="text-[11px] font-sans text-text-secondary hover:text-white transition-colors"
+            >
+              ↺ Auto
+            </button>
+          </div>
+
+          {isPicture ? (
+            <label className="block">
+              <span className="text-sm font-sans text-text-secondary">
+                Tamaño de la imagen en el disco · {Math.round(pictureZoom * 100)}%
+              </span>
+              <input
+                type="range"
+                min="0.6"
+                max="2"
+                step="0.05"
+                value={pictureZoom}
+                onChange={(e) => setPictureZoom(Number(e.target.value))}
+                className="w-full mt-2 accent-accent"
+              />
+            </label>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={discColor}
+                  onChange={(e) => setDiscColor(e.target.value)}
+                  className="w-9 h-9 rounded-md bg-transparent border border-border cursor-pointer shrink-0"
+                />
+                <span className="text-sm font-sans text-text-secondary">Color del disco</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={labelColor}
+                  onChange={(e) => setLabelColor(e.target.value)}
+                  className="w-9 h-9 rounded-md bg-transparent border border-border cursor-pointer shrink-0"
+                />
+                <span className="text-sm font-sans text-text-secondary">Color de la etiqueta</span>
+              </label>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center gap-2 pb-6">
         <button

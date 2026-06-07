@@ -545,6 +545,13 @@ export default function AlbumDetail() {
   // Format-dependent disc style for the success popup.
   const formatInfo = useMemo(() => detectFormatInfo(selectedAlbum?.formats), [selectedAlbum?.formats])
 
+  // Per-release vinyl style overrides (set in the editor): disc colour, label
+  // colour, picture-disc zoom. Fall back to auto-detected values.
+  const discStyle = releaseEdits.discStyle || {}
+  const effectiveDiscColor = discStyle.color || formatInfo.color
+  const effectiveLabelColor = discStyle.label || (effectiveDiscColor ? undefined : coverAccent)
+  const pictureZoom = discStyle.zoom || 1
+
   // Clear the selection once a scrobble completes (success or partial), and
   // show the flashy success popup.
   useEffect(() => {
@@ -553,10 +560,11 @@ export default function AlbumDetail() {
       setToast({
         id: Date.now(),
         kind: formatInfo.kind,
-        color: formatInfo.color,
+        color: effectiveDiscColor,
         translucent: formatInfo.translucent,
         image: formatInfo.picture ? artUrl : undefined,
-        labelColor: coverAccent,
+        labelColor: effectiveLabelColor,
+        imageZoom: pictureZoom,
         count: scrobbleState.total,
         partial: scrobbleState.status === 'partial',
       })
@@ -620,7 +628,7 @@ export default function AlbumDetail() {
                   aria-label="Scrobble álbum"
                   className="relative block rounded-full cursor-pointer active:scale-95 transition-transform disabled:opacity-60 md:pointer-events-none md:cursor-default"
                 >
-                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} image={formatInfo.picture ? artUrl : undefined} labelColor={coverAccent} size={104} />
+                  <Disc kind={formatInfo.kind} color={effectiveDiscColor} translucent={formatInfo.translucent} image={formatInfo.picture ? artUrl : undefined} labelColor={effectiveLabelColor} imageZoom={pictureZoom} size={104} />
                   {/* mobile-only pulsing glow → hints the disc is tappable */}
                   <span
                     className="md:hidden absolute inset-0 rounded-full scrobble-glow pointer-events-none"
@@ -732,6 +740,10 @@ export default function AlbumDetail() {
             baseDiscGroups={baseDiscGroups}
             discLabels={mergedDiscLabels}
             initialEdits={releaseEdits}
+            isVinyl={formatInfo.kind === 'vinyl'}
+            isPicture={formatInfo.picture}
+            autoColor={formatInfo.color}
+            autoLabel={coverAccent}
             onSave={handleSaveEdits}
             onCancel={() => setEditing(false)}
           />
@@ -858,6 +870,7 @@ export default function AlbumDetail() {
           translucent={toast.translucent}
           image={toast.image}
           labelColor={toast.labelColor}
+          imageZoom={toast.imageZoom}
           count={toast.count}
           partial={toast.partial}
           onDone={() => setToast(null)}

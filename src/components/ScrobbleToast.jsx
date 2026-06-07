@@ -25,20 +25,23 @@ const OPTICAL_GRADIENT = {
 
 // A spinning disc whose look depends on the release format. Size-aware so it can
 // be reused both in the scrobble toast (small) and the cover easter egg (large).
-export function Disc({ kind, color, translucent, size = 84, image, labelColor }) {
+export function Disc({ kind, color, translucent, size = 84, image, labelColor, imageZoom = 1 }) {
   const hub = Math.round(size * 0.38)
 
   // Picture disc — the album artwork is printed across the whole vinyl.
   if (image) {
     const spindle = Math.max(4, Math.round(size * 0.05))
+    const z = Math.round(100 * (imageZoom || 1))
     return (
       <div className="relative" style={{ width: size, height: size }}>
         <div
           className="absolute inset-0 rounded-full scrobble-disc-spin overflow-hidden"
           style={{
             backgroundImage: `url(${image})`,
-            backgroundSize: 'cover',
+            backgroundSize: `${z}% ${z}%`,
             backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundColor: '#0e0e12',
             boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 6px 18px rgba(0,0,0,0.55)',
           }}
         >
@@ -111,9 +114,9 @@ export function Disc({ kind, color, translucent, size = 84, image, labelColor })
             style={{
               width: hub,
               height: hub,
-              // Coloured vinyl → dark label for contrast; black vinyl → the cover's
-              // accent colour (or the app accent if none could be derived).
-              background: color ? '#0e0e12' : labelColor || '#f5a623',
+              // Explicit label colour wins; otherwise coloured vinyl → dark label
+              // for contrast, black vinyl → the app accent.
+              background: labelColor || (color ? '#0e0e12' : '#f5a623'),
               boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
             }}
           >
@@ -163,7 +166,7 @@ export function Disc({ kind, color, translucent, size = 84, image, labelColor })
   )
 }
 
-export default function ScrobbleToast({ kind = 'cd', color, translucent, image, labelColor, count = 0, partial, onDone }) {
+export default function ScrobbleToast({ kind = 'cd', color, translucent, image, labelColor, imageZoom, count = 0, partial, onDone }) {
   const [show, setShow] = useState(false)
   const meta = KIND_META[kind] || KIND_META.cd
 
@@ -198,7 +201,7 @@ export default function ScrobbleToast({ kind = 'cd', color, translucent, image, 
             className="absolute inset-0 rounded-full scrobble-glow"
             style={{ boxShadow: `0 0 24px 5px ${meta.glow}` }}
           />
-          <Disc kind={kind} color={color} translucent={translucent} image={image} labelColor={labelColor} />
+          <Disc kind={kind} color={color} translucent={translucent} image={image} labelColor={labelColor} imageZoom={imageZoom} />
           {/* success check badge */}
           <div className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-[#121216] scrobble-check-pop">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">

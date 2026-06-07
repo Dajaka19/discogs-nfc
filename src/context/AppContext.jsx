@@ -16,6 +16,7 @@ function isEmptyEdit(c) {
     (!c.titles || Object.keys(c.titles).length === 0) &&
     (!c.discs || Object.keys(c.discs).length === 0) &&
     (!c.discAsAlbum || Object.keys(c.discAsAlbum).length === 0) &&
+    (!c.discStyle || Object.keys(c.discStyle).length === 0) &&
     !c.joinHeadings &&
     !c.nfc
   )
