@@ -119,6 +119,18 @@ export function getDiscLabels(release) {
   return labels
 }
 
+// Returns the physical format object for each disc, in disc order (expanded by
+// each format's qty). E.g. [CD x3, Blu-ray x1] → [CDfmt, CDfmt, CDfmt, BDfmt].
+// Lets a box set animate each disc with ITS OWN format, not the whole release's.
+export function getDiscFormats(release) {
+  const out = []
+  for (const fmt of (release?.formats ?? []).filter(isPhysicalFormat)) {
+    const qty = parseInt(fmt.qty) || 1
+    for (let i = 0; i < qty; i++) out.push(fmt)
+  }
+  return out
+}
+
 // Tracks whose POSITION is a label like "INTRO" (instead of a number) are
 // interludes/intros that should never be scrobbled.
 function isNonScrobblePosition(position) {

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useLastfm } from '../hooks/useLastfm'
 import { useDiscogs } from '../hooks/useDiscogs'
-import { groupTracksByDisc, getDiscLabels, trackArtistString } from '../utils/tracklist'
+import { groupTracksByDisc, getDiscLabels, getDiscFormats, trackArtistString } from '../utils/tracklist'
 import { lookupDuration, getCachedDuration } from '../utils/duration'
 
 // Spanish (and other) reissues list a translated title after " = " (a Discogs
@@ -542,8 +542,14 @@ export default function AlbumDetail() {
       ? `Scrobble ${checkedTracks.size} pista${checkedTracks.size !== 1 ? 's' : ''}`
       : `Scrobble ${selectedDisc === 0 ? 'álbum' : 'disco'}`
 
-  // Format-dependent disc style for the success popup.
-  const formatInfo = useMemo(() => detectFormatInfo(selectedAlbum?.formats), [selectedAlbum?.formats])
+  // Format-dependent disc style for the success popup. In a mixed box set each
+  // disc has its OWN format, so detect from the SELECTED disc's format (not the
+  // whole release — otherwise one Blu-ray would make every disc look Blu-ray).
+  const discFormats = useMemo(() => getDiscFormats(selectedAlbum), [selectedAlbum])
+  const formatInfo = useMemo(() => {
+    const entry = selectedDisc > 0 ? discFormats[selectedDisc - 1] : discFormats[0]
+    return detectFormatInfo(entry ? [entry] : selectedAlbum?.formats)
+  }, [discFormats, selectedDisc, selectedAlbum?.formats])
 
   // Per-release vinyl style overrides (set in the editor): disc colour, label
   // colour, picture-disc zoom. Fall back to auto-detected values.
