@@ -7,6 +7,9 @@ import AlbumCard from './AlbumCard'
 export default function CollectionGrid() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('added')
+  const [filterArtist, setFilterArtist] = useState('')
+  const [filterFormat, setFilterFormat] = useState('')
+  const [filterNfc, setFilterNfc] = useState('')
   const {
     collectionLoading,
     collectionProgress,
@@ -16,7 +19,14 @@ export default function CollectionGrid() {
     selectedAlbum,
   } = useApp()
   const { loadCollection, selectAlbum } = useDiscogs()
-  const { filtered, total } = useCollection(search, sortBy)
+  const { filtered, total, artists, formats } = useCollection(
+    search,
+    sortBy,
+    filterArtist,
+    filterFormat,
+    filterNfc
+  )
+  const activeFilters = !!(filterArtist || filterFormat || filterNfc)
 
   const progressPct =
     collectionProgress.total > 0
@@ -67,6 +77,64 @@ export default function CollectionGrid() {
             className="w-full bg-card border border-border rounded-lg pl-8 pr-3 py-2 text-sm font-sans text-white placeholder-text-secondary focus:outline-none focus:border-accent/50 transition-colors"
           />
         </div>
+        {/* Filters: artist, format, NFC status */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={filterArtist}
+            onChange={(e) => setFilterArtist(e.target.value)}
+            title="Filtrar por artista"
+            className={`min-w-0 flex-1 text-xs font-sans bg-card border rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-colors ${
+              filterArtist ? 'border-accent/60 text-white' : 'border-border text-text-secondary'
+            }`}
+          >
+            <option value="">Todos los artistas</option>
+            {artists.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterFormat}
+            onChange={(e) => setFilterFormat(e.target.value)}
+            title="Filtrar por formato"
+            className={`text-xs font-sans bg-card border rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-colors ${
+              filterFormat ? 'border-accent/60 text-white' : 'border-border text-text-secondary'
+            }`}
+          >
+            <option value="">Formato</option>
+            {formats.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+
+          <select
+            value={filterNfc}
+            onChange={(e) => setFilterNfc(e.target.value)}
+            title="Filtrar por estado del NFC"
+            className={`text-xs font-sans bg-card border rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-colors ${
+              filterNfc ? 'border-accent/60 text-white' : 'border-border text-text-secondary'
+            }`}
+          >
+            <option value="">NFC</option>
+            <option value="yes">NFC grabado</option>
+            <option value="no">NFC sin grabar</option>
+          </select>
+
+          {activeFilters && (
+            <button
+              onClick={() => {
+                setFilterArtist('')
+                setFilterFormat('')
+                setFilterNfc('')
+              }}
+              title="Quitar filtros"
+              className="text-xs font-sans text-text-secondary hover:text-white px-2 py-1.5 rounded-lg border border-border hover:border-accent/40 transition-colors shrink-0"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center justify-between">
           <span className="text-xs text-text-secondary font-sans">
             {collectionLoading

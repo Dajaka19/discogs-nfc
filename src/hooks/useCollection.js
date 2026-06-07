@@ -1,8 +1,17 @@
 import { useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 
-export function useCollection(searchQuery = '', sortBy = 'added') {
-  const { collection } = useApp()
+const stripDisambig = (name) => (name || '').replace(/ \(\d+\)$/, '')
+const releaseId = (r) => r.id || r.basic_information?.id
+
+export function useCollection(
+  searchQuery = '',
+  sortBy = 'added',
+  filterArtist = '',
+  filterFormat = '',
+  filterNfc = '' // '' | 'yes' | 'no'
+) {
+  const { collection, edits } = useApp()
 
   // A Discogs collection can hold several copies (instances) of the exact same
   // release — same release id. Show each release only once.
@@ -10,7 +19,7 @@ export function useCollection(searchQuery = '', sortBy = 'added') {
     const seen = new Set()
     const out = []
     for (const r of collection) {
-      const id = r.id || r.basic_information?.id
+      const id = releaseId(r)
       if (id == null) { out.push(r); continue }
       if (seen.has(id)) continue
       seen.add(id)
@@ -18,6 +27,22 @@ export function useCollection(searchQuery = '', sortBy = 'added') {
     }
     return out
   }, [collection])
+
+  // Unique artists & formats for the filter dropdowns.
+  const { artists, formats } = useMemo(() => {
+    const aSet = new Set()
+    const fSet = new Set()
+    for (const r of deduped) {
+      const info = r.basic_information || {}
+      const a = stripDisambig(info.artists?.[0]?.name)
+      if (a) aSet.add(a)
+      for (const f of info.formats || []) if (f.name) fSet.add(f.name)
+    }
+    return {
+      artists: [...aSet].sort((x, y) => x.localeCompare(y)),
+      formats: [...fSet].sort((x, y) => x.localeCompare(y)),
+    }
+  }, [deduped])
 
   const filtered = useMemo(() => {
     let result = deduped
@@ -37,6 +62,21 @@ export function useCollection(searchQuery = '', sortBy = 'added') {
       })
     }
 
+    if (filterArtist) {
+      result = result.filter((r) => stripDisambig(r.basic_information?.artists?.[0]?.name) === filterArtist)
+    }
+
+    if (filterFormat) {
+      result = result.filter((r) =>
+        (r.basic_information?.formats || []).some((f) => f.name === filterFormat)
+      )
+    }
+
+    if (filterNfc === 'yes' || filterNfc === 'no') {
+      const want = filterNfc === 'yes'
+      result = result.filter((r) => !!edits?.[releaseId(r)]?.nfc === want)
+    }
+
     return [...result].sort((a, b) => {
       const ai = a.basic_information
       const bi = b.basic_information
@@ -52,7 +92,7 @@ export function useCollection(searchQuery = '', sortBy = 'added') {
           return (b.date_added || '').localeCompare(a.date_added || '')
       }
     })
-  }, [deduped, searchQuery, sortBy])
+  }, [deduped, searchQuery, sortBy, filterArtist, filterFormat, filterNfc, edits])
 
-  return { filtered, total: deduped.length }
+  return { filtered, total: deduped.length, artists, formats }
 }
