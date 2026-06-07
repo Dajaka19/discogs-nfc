@@ -74,7 +74,11 @@ function detectFormatInfo(formats = []) {
     // should resolve to green, not to "clear"). Prefer multi-word matches first
     // (e.g. "light blue" before "blue").
     const hueKeys = Object.keys(VINYL_COLORS).filter((c) => c !== 'clear' && c !== 'transparent')
-    const found = hueKeys.sort((a, b) => b.length - a.length).find((c) => text.includes(c))
+    // Match whole words only — otherwise "Remastered"/"Half-Speed Mastered" would
+    // match "red", and reissues would wrongly show a red disc.
+    const found = hueKeys
+      .sort((a, b) => b.length - a.length)
+      .find((c) => new RegExp(`\\b${c}\\b`).test(text))
     if (found) color = VINYL_COLORS[found]
     else if (translucent) color = '#cfe8ff' // clear vinyl with no stated hue
   }
