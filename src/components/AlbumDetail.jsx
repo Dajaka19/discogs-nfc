@@ -598,7 +598,7 @@ export default function AlbumDetail() {
               coverEgg ? 'translate-x-[52px]' : 'translate-x-0'
             }`}
           >
-            <h2 className="font-serif text-xl text-white leading-tight line-clamp-2">
+            <h2 className="font-serif text-xl text-white leading-tight line-clamp-none md:line-clamp-2">
               {selectedAlbum.title}
             </h2>
             <p className="font-sans text-sm text-text-secondary mt-1">{artist}</p>
