@@ -42,6 +42,35 @@ function evictOldestIfNeeded(cache) {
   return next
 }
 
+// Drop the heavy fields we never render so far more releases fit in the ~5 MB
+// localStorage quota (full Discogs detail objects are large — videos, community
+// stats, the full images array, etc.).
+function slimRelease(detail) {
+  if (!detail || typeof detail !== 'object') return detail
+  const { community, videos, companies, identifiers, series, extraartists, ...rest } = detail
+  return { ...rest, images: Array.isArray(detail.images) ? detail.images.slice(0, 1) : detail.images }
+}
+
+// Persist the cache, evicting the oldest entries (never `keepId`) and retrying
+// when the storage quota is exceeded — so the MOST RECENTLY fetched releases are
+// the ones kept, instead of silently lost on reload.
+function persistReleaseCache(key, cache, keepId) {
+  let next = cache
+  for (;;) {
+    try {
+      localStorage.setItem(key, JSON.stringify(next))
+      return next
+    } catch {
+      const ids = Object.keys(next).filter((k) => String(k) !== String(keepId))
+      if (ids.length === 0) return next // can't shrink further
+      ids.sort((a, b) => (next[a]._cachedAt || 0) - (next[b]._cachedAt || 0))
+      const pruned = { ...next }
+      delete pruned[ids[0]] // drop the oldest and retry
+      next = pruned
+    }
+  }
+}
+
 export const AppContext = createContext(null)
 
 export function AppProvider({ children }) {
@@ -188,14 +217,11 @@ export function AppProvider({ children }) {
     setReleaseCacheState((prev) => {
       const next = evictOldestIfNeeded({
         ...prev,
-        [id]: { ...detail, _cachedAt: Date.now() },
+        [id]: { ...slimRelease(detail), _cachedAt: Date.now() },
       })
-      try {
-        localStorage.setItem(STORAGE_KEYS.releaseCache, JSON.stringify(next))
-      } catch {
-        // localStorage quota exceeded — skip persisting
-      }
-      return next
+      // Persist with quota handling: on overflow the OLDEST entries are dropped
+      // and we retry, so the just-fetched release is never the one discarded.
+      return persistReleaseCache(STORAGE_KEYS.releaseCache, next, id)
     })
   }, [])
 
