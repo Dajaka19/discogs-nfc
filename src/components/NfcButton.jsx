@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useApp } from '../context/AppContext'
 
 // NFC tag writing.
 //
@@ -19,6 +20,8 @@ const WEB_BASE = 'https://discogs-nfc.vercel.app/?release='
 export default function NfcButton({ releaseId }) {
   const [status, setStatus] = useState('idle') // idle | writing | done | error | copied
   const [showHelp, setShowHelp] = useState(false)
+  const { edits, setReleaseNfc } = useApp()
+  const nfcWritten = !!edits?.[releaseId]?.nfc
 
   const supportsWebNfc = typeof window !== 'undefined' && 'NDEFReader' in window
   const tagUrl = `${SCHEME_BASE}/${releaseId}`
@@ -39,6 +42,7 @@ export default function NfcButton({ releaseId }) {
           ],
         })
         setStatus('done')
+        setReleaseNfc(releaseId, true) // auto-mark as written
         setTimeout(() => setStatus('idle'), 3000)
       } catch {
         setStatus('error')
@@ -67,7 +71,29 @@ export default function NfcButton({ releaseId }) {
 
   return (
     <div className="space-y-2">
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Written-status indicator — shown on every platform, tap to toggle by hand */}
+      <button
+        onClick={() => setReleaseNfc(releaseId, !nfcWritten)}
+        title={nfcWritten ? 'Marcado como grabado (tocar para desmarcar)' : 'Sin grabar (tocar para marcar)'}
+        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-sans transition-all ${
+          nfcWritten
+            ? 'border-green-700/50 bg-green-900/30 text-green-400'
+            : 'border-border bg-card text-text-secondary hover:text-white'
+        }`}
+      >
+        {nfcWritten ? (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="9" />
+          </svg>
+        )}
+        {nfcWritten ? 'NFC grabado' : 'NFC sin grabar'}
+      </button>
+
       {/* Direct write only where the browser can do it (Android Web NFC) */}
       {supportsWebNfc && (
         <button

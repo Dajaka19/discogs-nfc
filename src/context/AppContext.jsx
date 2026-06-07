@@ -10,6 +10,17 @@ const STORAGE_KEYS = {
 
 const MAX_CACHE_ENTRIES = 200
 
+// A per-release edit object carries no information → can be dropped.
+function isEmptyEdit(c) {
+  return (
+    (!c.titles || Object.keys(c.titles).length === 0) &&
+    (!c.discs || Object.keys(c.discs).length === 0) &&
+    (!c.discAsAlbum || Object.keys(c.discAsAlbum).length === 0) &&
+    !c.joinHeadings &&
+    !c.nfc
+  )
+}
+
 function loadFromStorage(key, fallback) {
   try {
     const val = localStorage.getItem(key)
@@ -124,31 +135,52 @@ export function AppProvider({ children }) {
     }
   }, [discogsUser, persistEditsLocal])
 
+  // Persist locally + best-effort cloud sync of the whole edits map.
+  const persistAndSyncEdits = useCallback(
+    (next) => {
+      persistEditsLocal(next)
+      if (discogsUser) {
+        fetch(`/api/edits?user=${encodeURIComponent(discogsUser)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(next),
+        }).catch(() => {})
+      }
+    },
+    [discogsUser, persistEditsLocal]
+  )
+
   const saveReleaseEdits = useCallback(
     (releaseId, releaseEdits) => {
       setEditsState((prev) => {
         const next = { ...prev }
-        const clean = releaseEdits || {}
-        const empty =
-          (!clean.titles || Object.keys(clean.titles).length === 0) &&
-          (!clean.discs || Object.keys(clean.discs).length === 0) &&
-          (!clean.discAsAlbum || Object.keys(clean.discAsAlbum).length === 0) &&
-          !clean.joinHeadings
-        if (empty) delete next[releaseId]
+        // Preserve a previously-set NFC flag when saving editor changes.
+        const clean = { ...(releaseEdits || {}) }
+        if (prev[releaseId]?.nfc && clean.nfc === undefined) clean.nfc = true
+        if (isEmptyEdit(clean)) delete next[releaseId]
         else next[releaseId] = clean
-        persistEditsLocal(next)
-        // Sync to cloud (best-effort).
-        if (discogsUser) {
-          fetch(`/api/edits?user=${encodeURIComponent(discogsUser)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(next),
-          }).catch(() => {})
-        }
+        persistAndSyncEdits(next)
         return next
       })
     },
-    [discogsUser, persistEditsLocal]
+    [persistAndSyncEdits]
+  )
+
+  // Mark/unmark whether the NFC tag for a release has been written.
+  const setReleaseNfc = useCallback(
+    (releaseId, written) => {
+      setEditsState((prev) => {
+        const nextEdit = { ...(prev[releaseId] || {}) }
+        if (written) nextEdit.nfc = true
+        else delete nextEdit.nfc
+        const next = { ...prev }
+        if (isEmptyEdit(nextEdit)) delete next[releaseId]
+        else next[releaseId] = nextEdit
+        persistAndSyncEdits(next)
+        return next
+      })
+    },
+    [persistAndSyncEdits]
   )
 
   const cacheRelease = useCallback((id, detail) => {
@@ -192,6 +224,7 @@ export function AppProvider({ children }) {
         setPrefs,
         edits,
         saveReleaseEdits,
+        setReleaseNfc,
       }}
     >
       {children}
