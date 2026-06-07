@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { getAllReleases, putRelease, deleteReleases } from '../utils/releaseDB'
 
 const STORAGE_KEYS = {
   credentials: 'vinyl_credentials',
-  releaseCache: 'vinyl_release_cache',
+  releaseCache: 'vinyl_release_cache', // legacy (localStorage) — migrated to IndexedDB
   collection: 'vinyl_collection',
   prefs: 'vinyl_prefs',
   edits: 'vinyl_edits',
 }
 
-const MAX_CACHE_ENTRIES = 200
+const MAX_CACHE_ENTRIES = 500
 
 // A per-release edit object carries no information → can be dropped.
 function isEmptyEdit(c) {
@@ -51,25 +52,6 @@ function slimRelease(detail) {
   return { ...rest, images: Array.isArray(detail.images) ? detail.images.slice(0, 1) : detail.images }
 }
 
-// Persist the cache, evicting the oldest entries (never `keepId`) and retrying
-// when the storage quota is exceeded — so the MOST RECENTLY fetched releases are
-// the ones kept, instead of silently lost on reload.
-function persistReleaseCache(key, cache, keepId) {
-  let next = cache
-  for (;;) {
-    try {
-      localStorage.setItem(key, JSON.stringify(next))
-      return next
-    } catch {
-      const ids = Object.keys(next).filter((k) => String(k) !== String(keepId))
-      if (ids.length === 0) return next // can't shrink further
-      ids.sort((a, b) => (next[a]._cachedAt || 0) - (next[b]._cachedAt || 0))
-      const pruned = { ...next }
-      delete pruned[ids[0]] // drop the oldest and retry
-      next = pruned
-    }
-  }
-}
 
 export const AppContext = createContext(null)
 
@@ -103,9 +85,45 @@ export function AppProvider({ children }) {
   const [collectionError, setCollectionError] = useState(null)
   const [selectedAlbum, setSelectedAlbum] = useState(null)
 
-  const [releaseCache, setReleaseCacheState] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.releaseCache, {})
-  )
+  // In-memory release cache, persisted to IndexedDB (not localStorage — see
+  // releaseDB.js). Loaded asynchronously on mount; legacy localStorage cache is
+  // migrated over and then removed to free up the localStorage quota.
+  const [releaseCache, setReleaseCacheState] = useState({})
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const all = await getAllReleases()
+      const map = {}
+      for (const r of all) map[String(r.id)] = r
+      // One-time migration of any old localStorage cache.
+      let legacy = {}
+      try {
+        legacy = JSON.parse(localStorage.getItem(STORAGE_KEYS.releaseCache) || '{}')
+      } catch {
+        legacy = {}
+      }
+      const legacyIds = Object.keys(legacy)
+      if (legacyIds.length) {
+        for (const id of legacyIds) {
+          const key = String(id)
+          if (!map[key]) {
+            const entry = { ...legacy[id], id: key }
+            map[key] = entry
+            putRelease(entry)
+          }
+        }
+        try {
+          localStorage.removeItem(STORAGE_KEYS.releaseCache)
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!cancelled) setReleaseCacheState(map)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const [settingsOpen, setSettingsOpen] = useState(() => {
     const creds = loadFromStorage(STORAGE_KEYS.credentials, {})
@@ -214,14 +232,17 @@ export function AppProvider({ children }) {
   )
 
   const cacheRelease = useCallback((id, detail) => {
+    const key = String(detail?.id ?? id)
+    const entry = { ...slimRelease(detail), id: key, _cachedAt: Date.now() }
+    putRelease(entry) // write-through to IndexedDB (huge quota, async)
     setReleaseCacheState((prev) => {
-      const next = evictOldestIfNeeded({
-        ...prev,
-        [id]: { ...slimRelease(detail), _cachedAt: Date.now() },
-      })
-      // Persist with quota handling: on overflow the OLDEST entries are dropped
-      // and we retry, so the just-fetched release is never the one discarded.
-      return persistReleaseCache(STORAGE_KEYS.releaseCache, next, id)
+      const merged = { ...prev, [key]: entry }
+      const capped = evictOldestIfNeeded(merged)
+      if (capped !== merged) {
+        const removed = Object.keys(merged).filter((k) => !(k in capped))
+        deleteReleases(removed) // keep IndexedDB in sync with the in-memory cap
+      }
+      return capped
     })
   }, [])
 
