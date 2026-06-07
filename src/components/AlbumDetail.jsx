@@ -78,7 +78,9 @@ function detectFormatInfo(formats = []) {
     if (found) color = VINYL_COLORS[found]
     else if (translucent) color = '#cfe8ff' // clear vinyl with no stated hue
   }
-  return { kind, color, translucent }
+  // Picture disc: the artwork is printed on the vinyl → show the cover as the disc.
+  const picture = /picture disc/.test(all)
+  return { kind, color, translucent, picture }
 }
 
 export default function AlbumDetail() {
@@ -497,6 +499,7 @@ export default function AlbumDetail() {
         kind: formatInfo.kind,
         color: formatInfo.color,
         translucent: formatInfo.translucent,
+        image: formatInfo.picture ? artUrl : undefined,
         count: scrobbleState.total,
         partial: scrobbleState.status === 'partial',
       })
@@ -560,7 +563,7 @@ export default function AlbumDetail() {
                   aria-label="Scrobble álbum"
                   className="relative block rounded-full cursor-pointer active:scale-95 transition-transform disabled:opacity-60 md:pointer-events-none md:cursor-default"
                 >
-                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} size={104} />
+                  <Disc kind={formatInfo.kind} color={formatInfo.color} translucent={formatInfo.translucent} image={formatInfo.picture ? artUrl : undefined} size={104} />
                   {/* mobile-only pulsing glow → hints the disc is tappable */}
                   <span
                     className="md:hidden absolute inset-0 rounded-full scrobble-glow pointer-events-none"
@@ -796,6 +799,7 @@ export default function AlbumDetail() {
           kind={toast.kind}
           color={toast.color}
           translucent={toast.translucent}
+          image={toast.image}
           count={toast.count}
           partial={toast.partial}
           onDone={() => setToast(null)}

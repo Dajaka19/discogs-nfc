@@ -25,8 +25,55 @@ const OPTICAL_GRADIENT = {
 
 // A spinning disc whose look depends on the release format. Size-aware so it can
 // be reused both in the scrobble toast (small) and the cover easter egg (large).
-export function Disc({ kind, color, translucent, size = 84 }) {
+export function Disc({ kind, color, translucent, size = 84, image }) {
   const hub = Math.round(size * 0.38)
+
+  // Picture disc — the album artwork is printed across the whole vinyl.
+  if (image) {
+    const spindle = Math.max(4, Math.round(size * 0.05))
+    return (
+      <div className="relative" style={{ width: size, height: size }}>
+        <div
+          className="absolute inset-0 rounded-full scrobble-disc-spin overflow-hidden"
+          style={{
+            backgroundImage: `url(${image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 6px 18px rgba(0,0,0,0.55)',
+          }}
+        >
+          {/* faint vinyl grooves over the artwork */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              backgroundImage:
+                'repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, rgba(255,255,255,0.05) 1.6px, rgba(255,255,255,0.05) 2.2px)',
+              mixBlendMode: 'overlay',
+            }}
+          />
+          {/* rotating light wedge → reflective shine */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background:
+                'conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.16) 0deg, transparent 30deg, transparent 185deg, rgba(255,255,255,0.09) 210deg, transparent 260deg, transparent 360deg)',
+            }}
+          />
+          {/* centre spindle hole */}
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/85"
+            style={{ width: spindle, height: spindle, boxShadow: '0 0 0 3px rgba(0,0,0,0.3)' }}
+          />
+        </div>
+        {/* fixed specular sweep */}
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{ background: 'linear-gradient(125deg, rgba(255,255,255,0.26), transparent 42%)' }}
+        />
+      </div>
+    )
+  }
+
   if (kind === 'vinyl') {
     const body = color || '#15151a'
     const spindle = Math.max(4, Math.round(size * 0.06))
@@ -114,7 +161,7 @@ export function Disc({ kind, color, translucent, size = 84 }) {
   )
 }
 
-export default function ScrobbleToast({ kind = 'cd', color, translucent, count = 0, partial, onDone }) {
+export default function ScrobbleToast({ kind = 'cd', color, translucent, image, count = 0, partial, onDone }) {
   const [show, setShow] = useState(false)
   const meta = KIND_META[kind] || KIND_META.cd
 
@@ -149,7 +196,7 @@ export default function ScrobbleToast({ kind = 'cd', color, translucent, count =
             className="absolute inset-0 rounded-full scrobble-glow"
             style={{ boxShadow: `0 0 24px 5px ${meta.glow}` }}
           />
-          <Disc kind={kind} color={color} translucent={translucent} />
+          <Disc kind={kind} color={color} translucent={translucent} image={image} />
           {/* success check badge */}
           <div className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-[#121216] scrobble-check-pop">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
