@@ -207,12 +207,17 @@ function tryHeadingBasedGrouping(tracklist, physicalFormats) {
 
 // Extract the disc-unique identifier from a Discogs position string.
 // Must be checked in this order (most-specific first):
-//   CD1-1  → "CD1"  (FORMAT+DISCNUM-TRACKNUM: disc number is part of the id)
-//   SACD-1 → "SACD" (FORMAT-TRACKNUM: no disc number before the hyphen)
-//   BRD1   → "BRD"  (FORMATTRACKNUM: no separator at all)
+//   CD-Rom-1 → "CDROM" (hyphenated FORMAT name → distinct from the "CD-1" disc)
+//   CD1-1    → "CD1"   (FORMAT+DISCNUM-TRACKNUM: disc number is part of the id)
+//   SACD-1   → "SACD"  (FORMAT-TRACKNUM: no disc number before the hyphen)
+//   BRD1     → "BRD"   (FORMATTRACKNUM: no separator at all)
 // Single-letter positions (A1, B1…) are intentionally excluded by the {2,} minimum.
 function extractDiscId(position) {
   if (!position) return null
+  // Hyphenated FORMAT name then a track number: "CD-Rom-1" → "CDROM". Separates a
+  // CD-ROM (or similar) from the main "CD-1" disc, which extracts to "CD".
+  const m0 = position.match(/^([A-Za-z]{2,}(?:-[A-Za-z]+)+)-\d/)
+  if (m0) return m0[1].toUpperCase().replace(/-/g, '')
   // FORMAT+DISCNUM-TRACKNUM: "CD1-1", "CD2-3", "BD1-1" → "CD1", "CD2", "BD1"
   const m1 = position.match(/^([A-Za-z]{2,}\d+)-\d/)
   if (m1) return m1[1].toUpperCase()
