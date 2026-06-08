@@ -29,18 +29,25 @@ export default function NfcButton({ releaseId }) {
 
   const handleWrite = async () => {
     if (supportsWebNfc) {
-      // Android Chrome — write directly from the page. Two URL records: the app
-      // scheme first (iPhone uses it), the web URL second (PC NFC readers use it).
+      // Android Chrome — write directly from the page.
       try {
         setStatus('writing')
         // eslint-disable-next-line no-undef
         const ndef = new NDEFReader()
-        await ndef.write({
-          records: [
-            { recordType: 'url', data: tagUrl },
-            { recordType: 'url', data: webUrl },
-          ],
-        })
+        // Preferred: two URL records — the app scheme first (iPhone uses it) and
+        // the web URL second (PC NFC readers use it).
+        try {
+          await ndef.write({
+            records: [
+              { recordType: 'url', data: tagUrl },
+              { recordType: 'url', data: webUrl },
+            ],
+          })
+        } catch {
+          // Some tags/devices reject a multi-record write — fall back to a single
+          // record (the app scheme) so the tag still works on the phone.
+          await ndef.write({ records: [{ recordType: 'url', data: tagUrl }] })
+        }
         setStatus('done')
         setReleaseNfc(releaseId, true) // auto-mark as written
         setTimeout(() => setStatus('idle'), 3000)
