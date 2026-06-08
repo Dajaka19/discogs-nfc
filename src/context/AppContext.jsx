@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { getAllReleases, putRelease, deleteReleases } from '../utils/releaseDB'
 
 const STORAGE_KEYS = {
@@ -155,6 +155,8 @@ export function AppProvider({ children }) {
   // keyed by release id. Persisted locally for instant/offline use and synced
   // to the cloud (Vercel KV) by the user's Discogs username.
   const [edits, setEditsState] = useState(() => loadFromStorage(STORAGE_KEYS.edits, {}))
+  // Releases edited THIS session — the initial cloud GET must not clobber them.
+  const touchedEditsRef = useRef(new Set())
 
   const persistEditsLocal = useCallback((all) => {
     try {
@@ -174,8 +176,18 @@ export function AppProvider({ children }) {
       .then((cloud) => {
         if (cancelled || !cloud || typeof cloud !== 'object') return
         if (Object.keys(cloud).length === 0) return
-        setEditsState(cloud)
-        persistEditsLocal(cloud)
+        // Non-destructive merge: take cloud as the base, but KEEP local edits for
+        // releases edited this session (in-flight GET race) and releases the cloud
+        // doesn't have yet (a POST that hasn't landed / was made offline). This way
+        // a freshly-made edit is never lost when the cloud load completes.
+        setEditsState((prev) => {
+          const merged = { ...cloud }
+          for (const [id, val] of Object.entries(prev)) {
+            if (touchedEditsRef.current.has(id) || !(id in merged)) merged[id] = val
+          }
+          persistEditsLocal(merged)
+          return merged
+        })
       })
       .catch(() => {})
     return () => {
@@ -200,6 +212,7 @@ export function AppProvider({ children }) {
 
   const saveReleaseEdits = useCallback(
     (releaseId, releaseEdits) => {
+      touchedEditsRef.current.add(String(releaseId))
       setEditsState((prev) => {
         const next = { ...prev }
         // Preserve a previously-set NFC flag when saving editor changes.
@@ -217,6 +230,7 @@ export function AppProvider({ children }) {
   // Mark/unmark whether the NFC tag for a release has been written.
   const setReleaseNfc = useCallback(
     (releaseId, written) => {
+      touchedEditsRef.current.add(String(releaseId))
       setEditsState((prev) => {
         const nextEdit = { ...(prev[releaseId] || {}) }
         if (written) nextEdit.nfc = true
