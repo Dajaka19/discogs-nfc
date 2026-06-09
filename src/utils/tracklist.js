@@ -137,8 +137,19 @@ function isNonScrobblePosition(position) {
   return /^\s*intro\s*$/i.test(position || '')
 }
 
+// Tracks marked "(silence)" or "(no audio)" in the title aren't real audio →
+// never scrobble them (still shown, but dimmed and uncheckable).
+function isNonScrobbleTitle(title) {
+  return /\((?:silence|no\s*audio)\)/i.test(title || '')
+}
+
+// A track that must never be scrobbled (by position or title).
+function isNonScrobble(track) {
+  return isNonScrobblePosition(track.position) || isNonScrobbleTitle(track.title)
+}
+
 function enrichTrack(track, disc) {
-  const noScrobble = isNonScrobblePosition(track.position)
+  const noScrobble = isNonScrobble(track)
   return {
     ...track,
     _disc: disc,
@@ -155,7 +166,7 @@ function attachSubTracks(item, track, disc) {
   const indexTitle = item._isIndex || item._isHeading ? track.title : null
   item._subTracks = track.sub_tracks.map((s) => ({
     ...enrichTrack(s, disc),
-    _isSelectable: !isNonScrobblePosition(s.position),
+    _isSelectable: !isNonScrobble(s),
     _isSubTrack: true,
     _parentPosition: track.position,
     _indexTitle: indexTitle,
