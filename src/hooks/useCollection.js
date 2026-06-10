@@ -9,21 +9,9 @@ export function useCollection(
   sortBy = 'added',
   filterArtist = '',
   filterFormat = '',
-  filterNfc = '', // '' | 'yes' | 'no'
-  filterIndex = '' // '' | 'with' | 'without' (tracks with sub-indices / suites)
+  filterNfc = '' // '' | 'yes' | 'no'
 ) {
-  const { collection, edits, releaseCache } = useApp()
-
-  // Which releases have sub-index (suite) tracks — known only for releases whose
-  // detail has been loaded/cached (the collection list has no tracklist).
-  const suiteById = useMemo(() => {
-    const m = {}
-    for (const id in releaseCache) {
-      const r = releaseCache[id]
-      m[id] = (r?.tracklist || []).some((t) => t?.sub_tracks?.length > 0)
-    }
-    return m
-  }, [releaseCache])
+  const { collection, edits } = useApp()
 
   // A Discogs collection can hold several copies (instances) of the exact same
   // release — same release id. Show each release only once.
@@ -89,14 +77,6 @@ export function useCollection(
       result = result.filter((r) => !!edits?.[releaseId(r)]?.nfc === want)
     }
 
-    if (filterIndex === 'with') {
-      // Releases known to have sub-index (suite) tracks.
-      result = result.filter((r) => suiteById[String(releaseId(r))] === true)
-    } else if (filterIndex === 'without') {
-      // Everything not known to have suites (uncached are assumed without).
-      result = result.filter((r) => suiteById[String(releaseId(r))] !== true)
-    }
-
     return [...result].sort((a, b) => {
       const ai = a.basic_information
       const bi = b.basic_information
@@ -112,7 +92,7 @@ export function useCollection(
           return (b.date_added || '').localeCompare(a.date_added || '')
       }
     })
-  }, [deduped, searchQuery, sortBy, filterArtist, filterFormat, filterNfc, filterIndex, suiteById, edits])
+  }, [deduped, searchQuery, sortBy, filterArtist, filterFormat, filterNfc, edits])
 
   return { filtered, total: deduped.length, artists, formats }
 }
