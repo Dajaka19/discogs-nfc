@@ -532,7 +532,8 @@ export default function AlbumDetail() {
 
   const albumTitleClean = cleanName(selectedAlbum?.title)
   // Per-release suite naming mode (how a track's sub-indices are scrobbled).
-  const suiteMode = releaseEdits.suiteMode || 'default'
+  // Default when unconfigured is "merged" (one scrobble for the whole suite).
+  const suiteMode = releaseEdits.suiteMode || 'merged'
   // Does any track have sub-indices? (controls showing the option in the editor)
   const hasSuites = useMemo(
     () => Object.values(discGroups).some((disc) => disc.some((t) => t._hasSubTracks)),

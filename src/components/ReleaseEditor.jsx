@@ -41,8 +41,8 @@ export default function ReleaseEditor({
   const [labelColor, setLabelColor] = useState(initStyle.label || defLabelColor)
   const [pictureZoom, setPictureZoom] = useState(initStyle.zoom || 1)
 
-  // How suites (tracks with sub-indices) are named when scrobbled.
-  const [suiteMode, setSuiteMode] = useState(initialEdits.suiteMode || 'default')
+  // How suites (tracks with sub-indices) are named when scrobbled. Default 'merged'.
+  const [suiteMode, setSuiteMode] = useState(initialEdits.suiteMode || 'merged')
   const refs = useRef({}) // id -> input element
   const meta = useRef([]) // [{ id, kind, key, original }]
   meta.current = []
@@ -103,7 +103,9 @@ export default function ReleaseEditor({
       joinHeadings,
       discAsAlbum: discAsAlbumClean,
       discStyle,
-      suiteMode: suiteMode === 'default' ? undefined : suiteMode,
+      // Always record the choice for releases with suites (even if it equals the
+      // default) so the "needs editing" reminder clears once saved.
+      suiteMode: hasSuites ? suiteMode : undefined,
     })
   }
 
@@ -300,11 +302,11 @@ export default function ReleaseEditor({
           </h4>
           <p className="text-xs text-text-secondary font-sans">Cómo se nombran al hacer scrobble:</p>
           {[
-            { v: 'default', label: 'Por defecto', ex: 'Suite (Parte)' },
-            { v: 'merged', label: 'Unir en una sola', ex: 'Suite: I. Parte 1, II. Parte 2…' },
+            { v: 'merged', label: 'Unir en una sola (por defecto)', ex: 'Suite: I. Parte 1, II. Parte 2…' },
             { v: 'suite', label: 'Solo el título de la suite', ex: 'Suite' },
             { v: 'prefixed', label: 'Suite + índice por parte', ex: 'Suite (i) Parte' },
             { v: 'plain', label: 'Solo el nombre de la parte', ex: 'Parte' },
+            { v: 'default', label: 'Suite y nombre de parte', ex: 'Suite (Parte)' },
           ].map((o) => (
             <button
               key={o.v}
