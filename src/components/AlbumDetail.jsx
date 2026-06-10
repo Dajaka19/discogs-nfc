@@ -361,7 +361,7 @@ export default function AlbumDetail() {
         (releaseEdits.joinHeadings || selectedAlbum?.id === 608601 || prefs?.joinDiscHeadings) &&
         headings.length > 1
       ) {
-        result[disc] = headings.map((h) => h.title).join(' | ')
+        result[disc] = headings.map((h) => (h.title || '').trim()).join(' | ')
         continue
       }
       // A heading NAMES the disc only when the whole disc sits under it — i.e.
