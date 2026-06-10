@@ -18,6 +18,15 @@ function cleanScrobbleTitle(title) {
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV']
 const roman = (n) => ROMAN[n] || String(n)
 
+// Some releases already include the part index in the sub-track title (e.g.
+// "i. Long-Shadowed Sun", "(iv) F E A R"). Strip a leading index ONLY when it
+// matches this part's number, so we never duplicate it when re-adding our own.
+function stripLeadingIndex(title, subIndex) {
+  if (!title || !subIndex) return title
+  const re = new RegExp(`^\\s*\\(?\\s*(?:${roman(subIndex)}|${subIndex})\\s*[.):\\-]\\s*`, 'i')
+  return title.replace(re, '').trim() || title
+}
+
 // How a suite (a parent track with sub-tracks) is named when scrobbled. Chosen
 // per-release in the editor:
 //   'default'  → one scrobble per part: "Suite (Part)"        (original behaviour)
@@ -34,14 +43,17 @@ function suiteScrobbleEntries(parent, subs, mode, artist, album) {
   const parentArtist = trackArtistString(parent.artists)
   const suite = cleanScrobbleTitle(parent._indexTitle || parent.title)
 
+  // Clean part title without any index the release already baked into it.
+  const partTitle = (s) => cleanScrobbleTitle(stripLeadingIndex(s.title, s._subIndex))
+
   if (mode === 'merged') {
-    const name = `${suite}: ` + subs.map((s) => `${roman(s._subIndex)}. ${cleanScrobbleTitle(s.title)}`).join(', ')
+    const name = `${suite}: ` + subs.map((s) => `${roman(s._subIndex)}. ${partTitle(s)}`).join(', ')
     const total = subs.every((s) => s._durationSecs != null) ? subs.reduce((a, s) => a + s._durationSecs, 0) : null
     return [{ ...subs[0], title: name, _durationSecs: total, _artist: parentArtist || artist, _album: album }]
   }
 
   return subs.map((s) => {
-    const t = cleanScrobbleTitle(s.title)
+    const t = partTitle(s)
     let title
     if (mode === 'plain') title = t
     else if (mode === 'prefixed') title = `${suite} (${roman(s._subIndex).toLowerCase()}) ${t}`
