@@ -78,7 +78,7 @@ export default function ReleaseEditor({
         // Disc name: an empty field intentionally REMOVES the auto-label
         // (shows just "Disc N"). Store '' so it overrides the default.
         const trimmed = v.trim()
-        if (trimmed === (f.original || '')) continue
+        if (trimmed === (f.original || '').trim()) continue
         discs[f.key] = trimmed ? v : ''
       }
     }
