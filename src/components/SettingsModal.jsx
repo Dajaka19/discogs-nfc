@@ -276,6 +276,33 @@ export default function SettingsModal({ onClose }) {
             </div>
           </section>
 
+          {/* Scrobbling preferences */}
+          <section className="border-t border-border pt-4">
+            <h3 className="font-sans text-sm font-medium text-white mb-3">Scrobbling</h3>
+            <button
+              onClick={() => setPrefs({ cleanScrobbleNames: !prefs?.cleanScrobbleNames })}
+              className="w-full flex items-center justify-between gap-3 text-left"
+            >
+              <span className="text-sm font-sans text-text-secondary pr-2">
+                Limpiar nombres para coincidir con streaming
+                <span className="block text-xs opacity-60 mt-0.5">
+                  Quita etiquetas de reedición/remaster/edición de pistas y álbumes al scrobblear (p. ej. “Money (2011 Remaster)” → “Money”, “The Wall (Deluxe Edition)” → “The Wall”), para que Last.fm haga match con las versiones de streaming. Versiones como “(Live)” o “(Acoustic)” se mantienen.
+                </span>
+              </span>
+              <span
+                className={`shrink-0 w-10 h-6 rounded-full p-0.5 transition-colors ${
+                  prefs?.cleanScrobbleNames ? 'bg-accent' : 'bg-border'
+                }`}
+              >
+                <span
+                  className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                    prefs?.cleanScrobbleNames ? 'translate-x-4' : ''
+                  }`}
+                />
+              </span>
+            </button>
+          </section>
+
           {/* Advanced (hidden) — revealed by tapping the "Settings" title */}
           {showAdvanced && (
             <section className="border-t border-border pt-4">
