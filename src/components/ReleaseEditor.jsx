@@ -24,6 +24,7 @@ export default function ReleaseEditor({
   isPicture,
   autoColor,
   autoLabel,
+  hasSuites,
   onSave,
   onCancel,
 }) {
@@ -39,6 +40,9 @@ export default function ReleaseEditor({
   const [discColor, setDiscColor] = useState(initStyle.color || defDiscColor)
   const [labelColor, setLabelColor] = useState(initStyle.label || defLabelColor)
   const [pictureZoom, setPictureZoom] = useState(initStyle.zoom || 1)
+
+  // How suites (tracks with sub-indices) are named when scrobbled.
+  const [suiteMode, setSuiteMode] = useState(initialEdits.suiteMode || 'default')
   const refs = useRef({}) // id -> input element
   const meta = useRef([]) // [{ id, kind, key, original }]
   meta.current = []
@@ -93,7 +97,14 @@ export default function ReleaseEditor({
       }
     }
 
-    onSave({ titles, discs, joinHeadings, discAsAlbum: discAsAlbumClean, discStyle })
+    onSave({
+      titles,
+      discs,
+      joinHeadings,
+      discAsAlbum: discAsAlbumClean,
+      discStyle,
+      suiteMode: suiteMode === 'default' ? undefined : suiteMode,
+    })
   }
 
   const resetStyle = () => {
@@ -278,6 +289,37 @@ export default function ReleaseEditor({
               </label>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Suite naming — how tracks with sub-indices are scrobbled */}
+      {hasSuites && (
+        <div className="rounded-xl border border-border bg-card/40 p-3 space-y-2">
+          <h4 className="text-[10px] uppercase tracking-wider text-accent font-sans">
+            Pistas con sub-índices (suites)
+          </h4>
+          <p className="text-xs text-text-secondary font-sans">Cómo se nombran al hacer scrobble:</p>
+          {[
+            { v: 'default', label: 'Por defecto', ex: 'Suite (Parte)' },
+            { v: 'merged', label: 'Unir en una sola', ex: 'Suite: I. Parte 1, II. Parte 2…' },
+            { v: 'prefixed', label: 'Suite + índice por parte', ex: 'Suite (i) Parte' },
+            { v: 'plain', label: 'Solo el nombre de la parte', ex: 'Parte' },
+          ].map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => setSuiteMode(o.v)}
+              className={`w-full flex items-start gap-2 text-left rounded-lg border px-3 py-2 transition-colors ${
+                suiteMode === o.v ? 'border-accent/60 bg-accent/10' : 'border-border hover:border-accent/30'
+              }`}
+            >
+              <span className={`mt-0.5 w-3.5 h-3.5 rounded-full border shrink-0 ${suiteMode === o.v ? 'border-accent bg-accent' : 'border-border'}`} />
+              <span className="min-w-0">
+                <span className="block text-sm font-sans text-white">{o.label}</span>
+                <span className="block text-xs font-mono text-text-secondary truncate">{o.ex}</span>
+              </span>
+            </button>
+          ))}
         </div>
       )}
 

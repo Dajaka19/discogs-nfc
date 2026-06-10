@@ -164,12 +164,13 @@ function enrichTrack(track, disc) {
 function attachSubTracks(item, track, disc) {
   if (!track.sub_tracks?.length) return
   const indexTitle = item._isIndex || item._isHeading ? track.title : null
-  item._subTracks = track.sub_tracks.map((s) => ({
+  item._subTracks = track.sub_tracks.map((s, i) => ({
     ...enrichTrack(s, disc),
     _isSelectable: !isNonScrobble(s),
     _isSubTrack: true,
     _parentPosition: track.position,
     _indexTitle: indexTitle,
+    _subIndex: i + 1, // 1-based part number within the suite
   }))
   // Only compute a total when EVERY sub-track has a known duration, otherwise
   // the sum would be misleading. Unknown → null (no time shown for the parent).

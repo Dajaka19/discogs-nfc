@@ -15,18 +15,49 @@ function cleanScrobbleTitle(title) {
   return (i >= 0 ? title.slice(0, i) : title).trim()
 }
 
-// Build a Last.fm scrobble payload from a flat track array (handles sub-tracks,
-// skips non-scrobblable rows, cleans titles, prefixes movement index names).
-function buildScrobbleList(tracks, artist, album) {
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV']
+const roman = (n) => ROMAN[n] || String(n)
+
+// How a suite (a parent track with sub-tracks) is named when scrobbled. Chosen
+// per-release in the editor:
+//   'default'  → one scrobble per part: "Suite (Part)"        (original behaviour)
+//   'merged'   → ONE scrobble for the whole suite:
+//                "Suite: I. Part one, II. Part two, …"        (e.g. Rush "2112")
+//   'prefixed' → one per part, with the part index:
+//                "Suite (i) Part"                             (e.g. Marillion "El Dorado")
+//   'plain'    → one per part, just the part title: "Part"
+//
+// `subs` is the list of sub-tracks to include (already filtered to selectable /
+// checked). Each carries `_subIndex` (its 1-based position in the FULL suite).
+function suiteScrobbleEntries(parent, subs, mode, artist, album) {
+  if (subs.length === 0) return []
+  const parentArtist = trackArtistString(parent.artists)
+  const suite = cleanScrobbleTitle(parent._indexTitle || parent.title)
+
+  if (mode === 'merged') {
+    const name = `${suite}: ` + subs.map((s) => `${roman(s._subIndex)}. ${cleanScrobbleTitle(s.title)}`).join(', ')
+    const total = subs.every((s) => s._durationSecs != null) ? subs.reduce((a, s) => a + s._durationSecs, 0) : null
+    return [{ ...subs[0], title: name, _durationSecs: total, _artist: parentArtist || artist, _album: album }]
+  }
+
+  return subs.map((s) => {
+    const t = cleanScrobbleTitle(s.title)
+    let title
+    if (mode === 'plain') title = t
+    else if (mode === 'prefixed') title = `${suite} (${roman(s._subIndex).toLowerCase()}) ${t}`
+    else title = s._indexTitle ? `${suite} (${t})` : t // default
+    return { ...s, title, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: album }
+  })
+}
+
+// Build a Last.fm scrobble payload from a flat track array (handles sub-tracks
+// via the chosen suite naming mode, skips non-scrobblable rows, cleans titles).
+function buildScrobbleList(tracks, artist, album, suiteMode = 'default') {
   const out = []
   for (const track of tracks) {
     if (track._hasSubTracks && track._subTracks) {
-      const parentArtist = trackArtistString(track.artists)
-      for (const s of track._subTracks) {
-        if (s._isSelectable === false) continue
-        const t = cleanScrobbleTitle(s.title)
-        out.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: album })
-      }
+      const subs = track._subTracks.filter((s) => s._isSelectable !== false)
+      out.push(...suiteScrobbleEntries(track, subs, suiteMode, artist, album))
     } else if (track._isSelectable) {
       out.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: album })
     }
@@ -460,6 +491,13 @@ export default function AlbumDetail() {
   )
 
   const albumTitleClean = cleanScrobbleTitle(selectedAlbum?.title)
+  // Per-release suite naming mode (how a track's sub-indices are scrobbled).
+  const suiteMode = releaseEdits.suiteMode || 'default'
+  // Does any track have sub-indices? (controls showing the option in the editor)
+  const hasSuites = useMemo(
+    () => Object.values(discGroups).some((disc) => disc.some((t) => t._hasSubTracks)),
+    [discGroups]
+  )
 
   // Per-disc scrobble album. In a box set ("Original Album Series", …) each disc
   // is a different album; the editor can mark a disc so its own name is used as
@@ -479,18 +517,18 @@ export default function AlbumDetail() {
     (discsObj) => {
       const out = []
       for (const key of Object.keys(discsObj).sort((a, b) => Number(a) - Number(b))) {
-        out.push(...buildScrobbleList(discsObj[key], artist, albumByDisc[Number(key)] ?? albumTitleClean))
+        out.push(...buildScrobbleList(discsObj[key], artist, albumByDisc[Number(key)] ?? albumTitleClean, suiteMode))
       }
       return out
     },
-    [artist, albumByDisc, albumTitleClean]
+    [artist, albumByDisc, albumTitleClean, suiteMode]
   )
 
   // Tracks of the current view (a disc tab, or all discs) — the default scrobble.
   const currentDiscForScrobble = useMemo(() => {
     if (selectedDisc === 0) return buildDiscsScrobble(discGroups)
-    return buildScrobbleList(currentDisc, artist, albumByDisc[selectedDisc] ?? albumTitleClean)
-  }, [selectedDisc, discGroups, currentDisc, artist, albumByDisc, albumTitleClean, buildDiscsScrobble])
+    return buildScrobbleList(currentDisc, artist, albumByDisc[selectedDisc] ?? albumTitleClean, suiteMode)
+  }, [selectedDisc, discGroups, currentDisc, artist, albumByDisc, albumTitleClean, buildDiscsScrobble, suiteMode])
 
   // Checked tracks across all discs — the scrobble when something is selected.
   const selectedTracksForScrobble = useMemo(() => {
@@ -499,20 +537,16 @@ export default function AlbumDetail() {
       const discAlbum = albumByDisc[Number(key)] ?? albumTitleClean
       for (const track of disc) {
         if (track._hasSubTracks && track._subTracks) {
-          const parentArtist = trackArtistString(track.artists)
-          track._subTracks.forEach((s) => {
-            if (s._isSelectable !== false && checkedTracks.has(trackKey(s))) {
-              const t = cleanScrobbleTitle(s.title)
-              result.push({ ...s, title: s._indexTitle ? `${cleanScrobbleTitle(s._indexTitle)} (${t})` : t, _artist: trackArtistString(s.artists) || parentArtist || artist, _album: discAlbum })
-            }
-          })
+          // Only the checked sub-tracks, named per the suite mode.
+          const subs = track._subTracks.filter((s) => s._isSelectable !== false && checkedTracks.has(trackKey(s)))
+          result.push(...suiteScrobbleEntries(track, subs, suiteMode, artist, discAlbum))
         } else if (track._isSelectable && checkedTracks.has(trackKey(track))) {
           result.push({ ...track, title: cleanScrobbleTitle(track.title), _artist: trackArtistString(track.artists) || artist, _album: discAlbum })
         }
       }
     }
     return result
-  }, [checkedTracks, discGroups, artist, albumByDisc, albumTitleClean])
+  }, [checkedTracks, discGroups, artist, albumByDisc, albumTitleClean, suiteMode])
 
   const handleSaveEdits = useCallback(
     (draft) => {
@@ -750,6 +784,7 @@ export default function AlbumDetail() {
             isPicture={formatInfo.picture}
             autoColor={formatInfo.color}
             autoLabel={coverAccent}
+            hasSuites={hasSuites}
             onSave={handleSaveEdits}
             onCancel={() => setEditing(false)}
           />
