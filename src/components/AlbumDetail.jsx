@@ -365,27 +365,23 @@ export default function AlbumDetail() {
         continue
       }
       // A heading NAMES the disc only when the whole disc sits under it — i.e.
-      // the disc STARTS with that heading (everything below belongs to it, e.g.
-      // each disc of a box set is "<album>" then its tracks). A disc that starts
-      // with a track has no name; the heading is then a mid-disc section.
-      //
-      // Named section headings that follow (song suites like "By-Tor", "Act II",
-      // or "Bonus Tracks") are considered part of that album, so they don't block
-      // naming. But an ANONYMOUS separator heading ("-", "—", blank) marks a break
-      // to content OUTSIDE the lead heading — e.g. the encores after "The Dark
-      // Side Of The Moon" on Pulse, or after the suites on Rush's live LP — so it
-      // disqualifies the lead from naming the disc.
-      // (Suites with their own sub-tracks already aren't counted as headings, so
-      // a disc like Rush "Archives" — "Fly By Night" + the By-Tor suite — is
-      // correctly named after its leading album heading.)
+      // the disc STARTS with that heading and it's the disc's only "section":
+      //   - it's the SOLE heading (each box-set disc = "<album>" + its tracks), OR
+      //   - it's immediately followed by a sub-heading (an album title over "Act"/
+      //     "Part" headings, e.g. Dream Theater's "Metropolis Pt 2"), OR
+      //   - the only other headings are "Bonus Track(s)".
+      // A disc with SEVERAL distinct sections (e.g. a Blu-ray with "…Remixes",
+      // "Bonus Track", "Documentary", "Promo Films") isn't one coherent work →
+      // it falls back to the FORMAT label ("Blu-ray"). Likewise a disc that starts
+      // with a track (Pulse encores, Rush live sides) has no heading name.
+      // (Suites with their own sub-tracks aren't counted as headings.)
       const isHead = (t) => t && (t._isIndex || t._isHeading) && !t._hasSubTracks
       const firstIsHeading = isHead(tracks[0])
-      const isSeparatorHeading = (t) => {
-        const title = (t.title || '').trim()
-        return title === '' || /^[-–—_.·•*~]+$/.test(title)
-      }
+      const isBonusHeading = (t) => /^bonus(\s+tracks?)?\b/i.test((t.title || '').trim())
       const otherHeadings = headings.filter((h) => h !== tracks[0])
-      const leadWrapsDisc = firstIsHeading && !otherHeadings.some(isSeparatorHeading)
+      const onlyBonusOthers = otherHeadings.length > 0 && otherHeadings.every(isBonusHeading)
+      const leadWrapsDisc =
+        firstIsHeading && (headings.length === 1 || isHead(tracks[1]) || onlyBonusOthers)
       const leadHeading = leadWrapsDisc ? tracks[0] : null
       const fmt = discLabels[disc]
       const label = leadHeading ? leadHeading.title : fmt
