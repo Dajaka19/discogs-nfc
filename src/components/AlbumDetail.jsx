@@ -63,9 +63,13 @@ function suiteScrobbleEntries(parent, subs, mode, artist, album, clean = cleanSc
   // Clean part title without any index the release already baked into it.
   const partTitle = (s) => clean(stripLeadingIndex(s.title, s._subIndex))
 
-  if (mode === 'merged') {
-    const name = `${suite}: ` + subs.map((s) => `${roman(s._subIndex)}. ${partTitle(s)}`).join(', ')
+  // One scrobble for the whole suite.
+  if (mode === 'merged' || mode === 'suite') {
     const total = subs.every((s) => s._durationSecs != null) ? subs.reduce((a, s) => a + s._durationSecs, 0) : null
+    const name =
+      mode === 'suite'
+        ? suite
+        : `${suite}: ` + subs.map((s) => `${roman(s._subIndex)}. ${partTitle(s)}`).join(', ')
     return [{ ...subs[0], title: name, _durationSecs: total, _artist: parentArtist || artist, _album: album }]
   }
 

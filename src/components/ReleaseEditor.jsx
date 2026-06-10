@@ -302,6 +302,7 @@ export default function ReleaseEditor({
           {[
             { v: 'default', label: 'Por defecto', ex: 'Suite (Parte)' },
             { v: 'merged', label: 'Unir en una sola', ex: 'Suite: I. Parte 1, II. Parte 2…' },
+            { v: 'suite', label: 'Solo el título de la suite', ex: 'Suite' },
             { v: 'prefixed', label: 'Suite + índice por parte', ex: 'Suite (i) Parte' },
             { v: 'plain', label: 'Solo el nombre de la parte', ex: 'Parte' },
           ].map((o) => (
