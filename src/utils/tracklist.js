@@ -44,8 +44,10 @@ export function getDiscNumber(position) {
   const dashMatch = position.match(/^(\d+)-\d/)
   if (dashMatch) return parseInt(dashMatch[1])
 
-  // "CD1", "CD2" style
-  const cdMatch = position.match(/^[A-Za-z]+(\d+)\./i)
+  // "CD1.", "SACD2." style — a MULTI-letter format prefix + disc number + dot.
+  // Requires 2+ letters so a vinyl side like "B3.a" (side B, track 3, part a) is
+  // NOT read as disc 3 — it falls through to the side-letter rule below.
+  const cdMatch = position.match(/^[A-Za-z]{2,}(\d+)\./i)
   if (cdMatch) return parseInt(cdMatch[1])
 
   // Side letter: A,B = disc 1 ; C,D = disc 2 ; E,F = disc 3.
