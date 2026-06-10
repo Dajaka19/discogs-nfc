@@ -534,6 +534,8 @@ export default function AlbumDetail() {
     () => Object.values(discGroups).some((disc) => disc.some((t) => t._hasSubTracks)),
     [discGroups]
   )
+  // Has suites but the user hasn't chosen how they scrobble yet → flag to edit.
+  const needsSuiteEdit = hasSuites && !releaseEdits.suiteMode
 
   // Per-disc scrobble album. In a box set ("Original Album Series", …) each disc
   // is a different album; the editor can mark a disc so its own name is used as
@@ -764,7 +766,7 @@ export default function AlbumDetail() {
               onClick={handleScrobbleAll}
               disabled={scrobbleState.status === 'loading'}
               title={`Scrobble all ${allTracksForScrobble.length} tracks`}
-              className={`shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] group ${
+              className={`relative shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border border-border bg-card/60 hover:border-accent/50 hover:bg-card disabled:opacity-40 transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] group ${
                 coverEgg
                   ? 'translate-x-[160px] opacity-0 pointer-events-none md:translate-x-0 md:opacity-100 md:pointer-events-auto'
                   : 'translate-x-0'
@@ -779,6 +781,20 @@ export default function AlbumDetail() {
               <span className="text-xs font-sans text-text-secondary group-hover:text-accent transition-colors leading-none">
                 Scrobble<br />album
               </span>
+
+              {/* Reminder: this release has suites (sub-indices) not yet configured —
+                  open Editar to choose how they're named when scrobbled. */}
+              {needsSuiteEdit && (
+                <span
+                  title="Tiene pistas con sub-índices: edita cómo se nombran al scrobblear"
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-amber-400 border-2 border-card flex items-center justify-center scrobble-glow"
+                >
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  </svg>
+                </span>
+              )}
             </button>
           )}
         </div>
