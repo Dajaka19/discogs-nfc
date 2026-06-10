@@ -10,6 +10,7 @@ export default function CollectionGrid() {
   const [filterArtist, setFilterArtist] = useState('')
   const [filterFormat, setFilterFormat] = useState('')
   const [filterNfc, setFilterNfc] = useState('')
+  const [filterIndex, setFilterIndex] = useState('')
   const {
     collectionLoading,
     collectionProgress,
@@ -24,9 +25,10 @@ export default function CollectionGrid() {
     sortBy,
     filterArtist,
     filterFormat,
-    filterNfc
+    filterNfc,
+    filterIndex
   )
-  const activeFilters = !!(filterArtist || filterFormat || filterNfc)
+  const activeFilters = !!(filterArtist || filterFormat || filterNfc || filterIndex)
 
   const progressPct =
     collectionProgress.total > 0
@@ -120,12 +122,26 @@ export default function CollectionGrid() {
             <option value="no">NFC sin grabar</option>
           </select>
 
+          <select
+            value={filterIndex}
+            onChange={(e) => setFilterIndex(e.target.value)}
+            title="Filtrar por pistas con sub-índices (suites)"
+            className={`text-xs font-sans bg-card border rounded-lg px-2 py-1.5 outline-none cursor-pointer transition-colors ${
+              filterIndex ? 'border-accent/60 text-white' : 'border-border text-text-secondary'
+            }`}
+          >
+            <option value="">Índices</option>
+            <option value="with">Con índices</option>
+            <option value="without">Sin índices</option>
+          </select>
+
           {activeFilters && (
             <button
               onClick={() => {
                 setFilterArtist('')
                 setFilterFormat('')
                 setFilterNfc('')
+                setFilterIndex('')
               }}
               title="Quitar filtros"
               className="text-xs font-sans text-text-secondary hover:text-white px-2 py-1.5 rounded-lg border border-border hover:border-accent/40 transition-colors shrink-0"
