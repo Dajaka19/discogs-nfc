@@ -103,6 +103,7 @@ import ScrobbleButton from './ScrobbleButton'
 import NfcButton from './NfcButton'
 import ReleaseEditor from './ReleaseEditor'
 import ScrobbleToast, { Disc } from './ScrobbleToast'
+import Visualizer from './Visualizer'
 
 // Discogs vinyl "colour" words (in format.text / descriptions) → a display hex.
 const VINYL_COLORS = {
@@ -195,6 +196,7 @@ export default function AlbumDetail() {
   const [toast, setToast] = useState(null) // scrobble-success popup
   const [coverEgg, setCoverEgg] = useState(false) // disc-behind-cover easter egg
   const [coverAccent, setCoverAccent] = useState(null) // vinyl label colour from art
+  const [visualizerIdx, setVisualizerIdx] = useState(null) // full-screen lyrics view (desktop)
   const { scrobbleState, scrobble, reset } = useLastfm()
   const { refreshRelease } = useDiscogs()
 
@@ -452,6 +454,22 @@ export default function AlbumDetail() {
       }
     }
     return keys
+  }, [currentDisc])
+
+  // Flat list of playable leaf tracks on the current disc — what the full-screen
+  // visualizer steps through (sub-tracks included, non-scrobblable rows skipped).
+  const playableTracks = useMemo(() => {
+    const out = []
+    for (const track of currentDisc) {
+      if (track._hasSubTracks && track._subTracks) {
+        track._subTracks.forEach((s) => {
+          if (s._isSelectable !== false) out.push(s)
+        })
+      } else if (track._isSelectable) {
+        out.push(track)
+      }
+    }
+    return out
   }, [currentDisc])
 
   const handleToggle = useCallback((track) => {
@@ -881,6 +899,19 @@ export default function AlbumDetail() {
                 Editar
               </button>
             )}
+            {/* Full-screen visualizer — desktop only */}
+            {playableTracks.length > 0 && (
+              <button
+                onClick={() => setVisualizerIdx(0)}
+                title="Visualizador a pantalla completa con letras sincronizadas"
+                className="hidden md:flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border bg-card text-text-secondary hover:text-white hover:border-accent/40 transition-all text-sm font-sans"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 19V9M9 19V5M14 19v-7M19 19v-4" />
+                </svg>
+                Visualizador
+              </button>
+            )}
             {selectedAlbum.id && (
               <button
                 onClick={handleRefresh}
@@ -935,6 +966,19 @@ export default function AlbumDetail() {
           </a>
         )}
       </div>
+
+      {visualizerIdx !== null && (
+        <Visualizer
+          tracks={playableTracks}
+          index={visualizerIdx}
+          onIndex={setVisualizerIdx}
+          album={albumTitleClean}
+          artist={artist}
+          artUrl={artUrl}
+          accent={coverAccent}
+          onClose={() => setVisualizerIdx(null)}
+        />
+      )}
 
       {toast && (
         <ScrobbleToast
