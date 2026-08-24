@@ -50,12 +50,13 @@ export function getDiscNumber(position) {
   const cdMatch = position.match(/^[A-Za-z]{2,}(\d+)\./i)
   if (cdMatch) return parseInt(cdMatch[1])
 
-  // Side letter: A,B = disc 1 ; C,D = disc 2 ; E,F = disc 3.
+  // Side letter: A,B = disc 1 ; C,D = disc 2 ; E,F = disc 3 … and so on, so a
+  // 4-LP box (sides A–H) maps G,H to disc 4 instead of falling back to disc 1.
   // The side letter may be followed by a track number ("A1", "C1-I") OR, when a
   // whole side is one suite, by a part marker with no number ("F-I", "F-II").
-  const letterMatch = position.match(/^([A-Fa-f])(?:\d|-|$)/)
+  const letterMatch = position.match(/^([A-Za-z])(?:\d|-|$)/)
   if (letterMatch) {
-    const idx = 'ABCDEF'.indexOf(letterMatch[1].toUpperCase())
+    const idx = letterMatch[1].toUpperCase().charCodeAt(0) - 65 // 'A' → 0
     return Math.floor(idx / 2) + 1
   }
 
@@ -91,7 +92,9 @@ export function detectDiscCount(release) {
     return Math.max(...nums, 1)
   }
 
-  const letters = [...new Set(positions.map((p) => p.match(/^([A-Fa-f])/i)?.[1]?.toUpperCase()).filter(Boolean))]
+  // Distinct vinyl sides ("A1", "B2", … "H3") → one disc per two sides. Requires
+  // a digit after the letter so multi-letter prefixes ("CD1-1") don't count.
+  const letters = [...new Set(positions.map((p) => p.match(/^([A-Za-z])\d/)?.[1]?.toUpperCase()).filter(Boolean))]
   if (letters.length > 2) return Math.ceil(letters.length / 2)
 
   return 1
