@@ -175,3 +175,13 @@ input[type='checkbox'] {
 .scrobble-sheen     { animation: scrobbleSheen 3.4s linear infinite; }
 .scrobble-check-pop { animation: scrobbleCheckPop 0.5s 0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .scrobble-glow      { animation: scrobbleGlow 1.8s ease-in-out infinite; }
+
+/* Scrollable panes with no visible scrollbar (visualizer) */
+.no-bar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-bar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
